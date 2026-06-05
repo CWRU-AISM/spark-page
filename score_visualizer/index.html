@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SPARK Score</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<script>if(new URLSearchParams(location.search).get('ui')==='0')document.documentElement.classList.add('ui0');</script>
+<style>html.ui0 #score-select,html.ui0 #panel,html.ui0 #readout,html.ui0 #tooltip{display:none!important}</style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#fff;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}
+html.export-mode,html.export-mode body{background:transparent!important}
+#container{width:100%;height:100%}
+#score-select{
+  position:fixed;top:12px;right:12px;z-index:10;
+  padding:4px 8px;border:1px solid #ccc;border-radius:4px;
+  font-size:11px;font-family:system-ui,-apple-system,sans-serif;background:rgba(255,255,255,0.9);
+  color:#333;cursor:pointer;outline:none;
+}
+#panel{
+  position:fixed;top:44px;right:12px;z-index:30;width:236px;max-height:84vh;overflow:auto;
+  display:none;background:rgba(255,255,255,0.93);border:1px solid #ccc;border-radius:8px;
+  padding:8px 10px;font:11px/1.4 system-ui,sans-serif;color:#333;
+}
+#panel input[type=range]{flex:1;min-width:0}
+html.export-mode #panel{display:none!important}
+</style>
+</head>
+<body>
+<div id="container"></div>
+<div id="readout" style="
+  position:fixed;top:12px;left:12px;z-index:20;
+  font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;line-height:1.5;color:#333;
+  background:rgba(255,255,255,0.88);border:1px solid #ccc;border-radius:6px;
+  padding:8px 11px;white-space:pre;pointer-events:none;
+"></div>
+<div id="tooltip" style="
+  position:fixed;display:none;z-index:20;
+  background:#fff;border:1px solid #ccc;border-radius:6px;
+  padding:10px 14px;font-size:11px;color:#333;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1);
+  font-family:ui-monospace,'SF Mono',Menlo,monospace;line-height:1.6;
+  pointer-events:none;max-width:260px;
+"></div>
+<div id="panel"></div>
+<select id="score-select">
+  <option value="mug_pour">Mug Pour — 6 notes, legato phrase</option>
+  <option value="mug_pour_birdview">Mug Pour (birdview)</option>
+  <option value="sponge_soap">Sponge Wash — 6 notes, legato phrase</option>
+  <option value="sweep_cubes">Sweep Cubes — 5 notes</option>
+  <option value="bimanual_fold">Bimanual T-shirt Fold — grand staff</option>
+  <option value="bimanual_dustpan">Bimanual Sweep — grand staff</option>
+  <option value="fold">T-shirt Fold (single-arm) — 8 notes</option>
+  <option value="silverware">Silverware Sort — 9 notes</option>
+  <option value="ur10e_plushie">Plushie in Bowl (UR10e) — 5 notes</option>
+  <option value="ur10e_utensils">Utensils in Tray (UR10e) — 9 notes</option>
+  <option value="dustpan_prod">Dustpan — 2 notes</option>
+  <option value="libero_bowl_stove">Bowl on Stove (LIBERO sim) — 5 notes</option>
+  <option value="libero_basket">Soup + Cheese to Basket (LIBERO sim) — 10 notes</option>
+  <option value="libero_moka">Both Moka Pots (LIBERO sim) — 10 notes</option>
+  <option value="capbench_wipe">Wipe (CaP-Bench sim) — 1 note</option>
+  <option value="capbench_stack">Stack (CaP-Bench sim) — 4 notes</option>
+  <option value="capbench_lift">Lift (CaP-Bench sim) — 3 notes</option>
+  <option value="medley">Medley — 10 tasks, sim + 3 robots (loop)</option>
+</select>
+
+<script type="importmap">
+{"imports":{"three":"./three.module.js"}}
+</script>
+
+<script type="module">
+window.onerror = (msg,src,line,col,err) => {
+  document.body.innerHTML = `<pre style="padding:20px;color:red">${msg}\n${src}:${line}:${col}\n${err?.stack||''}</pre>`;
+};
+import * as THREE from 'three';
+import {OrbitControls} from './OrbitControls.js';
+
+// ROLLOUT FRAMES
+// Rollout frames served via symlink: score_visualizer/rollouts -> ../rollouts
+
+function showFrameInTooltip(tooltipEl, scoreKey, noteIdx){
+  const score=SCORES[scoreKey];
+  if(!score||!score.rollout)return;
+  const phase=score.notePhase?score.notePhase[noteIdx]:null;
+  if(!phase)return;
+  // bimanual uses 'external' camera, single-arm uses 'birdview'
+  const cam=score.bimanual?'external':'birdview';
+  const src=`rollouts/${score.rollout}/keyframe_${phase}_${cam}.png`;
+  const existing=tooltipEl.querySelector('.frame-img');
+  if(existing){existing.src=src;existing.style.display='block'}
+  else{
+    const img=document.createElement('img');
+    img.className='frame-img';
+    img.src=src;
+    img.style.cssText='width:100%;border-radius:4px;margin-bottom:8px;display:block';
+    img.onerror=()=>{img.style.display='none'};
+    tooltipEl.prepend(img);
+  }
+}
+
+// SCORE DATA
+const SCORES = {
+  // Real Gemini-generated BTs from rollout bt_plan.yaml
+  sponge_soap:{
+    name:"Sponge Wash",
+    rollout:"sponge_wash/20260526_170353",
+    notePhase:["grasp","lift","tool pose","scrub","retract","return","end"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/sponge2/01_grasp.jpg", caption:"grasp sponge"},
+      {noteIdx:1, src:"rollouts/corl/sponge2/02_lift.jpg", caption:"lift"},
+      {noteIdx:3, src:"rollouts/corl/sponge2/03_scrub.jpg", caption:"scrub"},
+      {noteIdx:4, src:"rollouts/corl/sponge2/04_retract.jpg", caption:"retract"},
+      {noteIdx:5, src:"rollouts/corl/sponge2/05_place.jpg", caption:"place"},
+      {noteIdx:6, src:"rollouts/corl/sponge2/06_release.jpg", caption:"release"}
+    ],
+    // Gemini BT generated from the rollout's first frame (sponge2_mess/gemini_bt.yaml)
+    notes:[
+      {type:"grasp_se3",label:"sponge",params:{force:20,target_width:0.03}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"tool_grip_pose",label:"sponge → plate",params:{approach_height:0.05}},
+      {type:"constrained_scrub",label:"plate",params:{duration:5.0,amplitude:0.05,frequency:2.0,normal_force:10.0,axis:"xy"}},
+      {type:"move_relative",label:"retract",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"sponge",params:{offset_z:0.04}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  mug_pour:{
+    name:"Mug Pour",
+    rollout:"mug_pour/20260526_163117",
+    notePhase:["grasp","lift","pour","return","end"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/mug_pour2/keyframe_02_at_grasp_sideview.jpg", caption:"grasp"},
+      {noteIdx:1, src:"rollouts/corl/mug_pour2/keyframe_04_lift_sideview.jpg", caption:"lift"},
+      {noteIdx:2, src:"rollouts/corl/mug_pour2/keyframe_06_pouring_sideview.jpg", caption:"pour"},
+      {noteIdx:3, src:"rollouts/corl/mug_pour2/keyframe_08_place_sideview.jpg", caption:"place back"},
+      {noteIdx:4, src:"rollouts/corl/mug_pour2/keyframe_09_released_sideview.jpg", caption:"release"}
+    ],
+    // Gemini BT generated from the rollout's annotated frame (mug_pour2/gemini_bt.yaml)
+    notes:[
+      {type:"grasp_se3",label:"mug handle",params:{force:50,target_width:0.015}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"pour",label:"bowl",params:{target_label:"bowl",pour_angle:1.57,hold_duration:2.0}},
+      {type:"move_to_keypoint",label:"mug",params:{offset_z:0.04}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  mug_pour_birdview:{
+    name:"Mug Pour (birdview)",
+    rollout:"mug_pour/20260526_163117",
+    notePhase:["detect","grasp","grasp","pour","pour","place","end"],
+    phases:[
+      {label:"Detect",start:0,end:0},
+      {label:"Grasp",start:1,end:1},
+      {label:"Lift",start:2,end:2},
+      {label:"Pour",start:3,end:3},
+      {label:"Return + Place",start:4,end:6}
+    ],
+    photos:[
+      {noteIdx:0, src:"rollouts/mug_pour/20260526_163117/frame_detect_bird.png", caption:"detect"},
+      {noteIdx:1, src:"rollouts/mug_pour/20260526_163117/keyframe_grasp_birdview.png", caption:"grasp"},
+      {noteIdx:2, src:"rollouts/mug_pour/20260526_163117/keyframe_lift_birdview.png", caption:"lift"},
+      {noteIdx:3, src:"rollouts/mug_pour/20260526_163117/keyframe_pour_birdview.png", caption:"pour"},
+      {noteIdx:4, src:"rollouts/mug_pour/20260526_163117/keyframe_above_bowl_birdview.png", caption:"above bowl"},
+      {noteIdx:5, src:"rollouts/mug_pour/20260526_163117/keyframe_place_birdview.png", caption:"descend"},
+      {noteIdx:6, src:"rollouts/mug_pour/20260526_163117/frame_release_bird.png", caption:"release"}
+    ],
+    notes:[
+      {type:"detect",label:"mug, bowl",params:{}},
+      {type:"grasp_se3",label:"mug handle",params:{force:60,target_width:0.03}},
+      {type:"move_relative",label:"lift",params:{dz:0.15}},
+      {type:"pour",label:"bowl",params:{source_label:"mug",target_label:"bowl",pour_angle_rad:1.4,target_fill_fraction:0.7,max_pour_s:10.0}},
+      {type:"move_to_keypoint",label:"mug",params:{offset_z:0.06}},
+      {type:"move_relative",label:"descend",params:{dz:-0.04}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  sweep_cubes:{
+    name:"Sweep Cubes",
+    rollout:"sweep_cubes/20260526_164718",
+    notePhase:["grasp","lift","sweep_start","sweep_done","end"],
+    phases:[
+      {label:"Grasp",start:0,end:0},
+      {label:"Lift",start:1,end:1},
+      {label:"Sweep",start:2,end:2},
+      {label:"Return + Place",start:3,end:4}
+    ],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/sweep2/01_grasp.jpg", caption:"grasp"},
+      {noteIdx:1, src:"rollouts/corl/sweep2/02_lift.jpg", caption:"lift"},
+      {noteIdx:2, src:"rollouts/corl/sweep2/03_sweep.jpg", caption:"sweep"},
+      {noteIdx:3, src:"rollouts/corl/sweep2/04_return.jpg", caption:"return"},
+      {noteIdx:4, src:"rollouts/corl/sweep2/05_release.jpg", caption:"release"}
+    ],
+    notes:[
+      {type:"grasp_se3",label:"brush",params:{strategy:"top_down",force:60,target_width:0.02}},
+      {type:"move_relative",label:"lift",params:{dz:0.1}},
+      {type:"sweep",label:"cubes → dustpan",params:{object_labels:"orange cube, green cube",target_label:"black dustpan",n_passes:2,sweep_height_m:0.04}},
+      {type:"move_to_keypoint",label:"brush",params:{offset_z:0.02}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  silverware:{
+    name:"Silverware Sort",
+    rollout:"corl/silverware",
+    notePhase:["grasp","lift","place","grasp","lift","place","grasp","lift","place"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/silverware/01_grasp1.jpg", caption:"grasp knife"},
+      {noteIdx:2, src:"rollouts/corl/silverware/03_place1.jpg", caption:"into slot"},
+      {noteIdx:3, src:"rollouts/corl/silverware/04_grasp2.jpg", caption:"grasp knife"},
+      {noteIdx:5, src:"rollouts/corl/silverware/06_place2.jpg", caption:"into slot"},
+      {noteIdx:6, src:"rollouts/corl/silverware/07_grasp3.jpg", caption:"grasp spoon"},
+      {noteIdx:8, src:"rollouts/corl/silverware/09_place3.jpg", caption:"into slot"}
+    ],
+    // Gemini BT shipped with the rollout (corl_supp_mat silverware/gemini_bt_01.yaml)
+    notes:[
+      {type:"grasp_se3",label:"knife handle 1",params:{strategy:"top_down",force:50,target_width:0.01}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"place_in_slot",label:"tray",params:{slot_idx:0}},
+      {type:"grasp_se3",label:"knife handle 2",params:{strategy:"top_down",force:50,target_width:0.01}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"place_in_slot",label:"tray",params:{slot_idx:0}},
+      {type:"grasp_se3",label:"spoon handle",params:{strategy:"top_down",force:50,target_width:0.01}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"place_in_slot",label:"tray",params:{slot_idx:1}}
+    ]
+  },
+  ur10e_plushie:{
+    name:"Plushie in Bowl",
+    rollout:"corl/ur10e_plushie",
+    notePhase:["detect","grasp","lift","to bowl","end"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/ur10e_plushie/00_detect.jpg", caption:"detect"},
+      {noteIdx:1, src:"rollouts/corl/ur10e_plushie/01_grasp.jpg", caption:"grasp"},
+      {noteIdx:2, src:"rollouts/corl/ur10e_plushie/02_lift.jpg", caption:"lift"},
+      {noteIdx:3, src:"rollouts/corl/ur10e_plushie/03_at_bowl.jpg", caption:"above bowl"},
+      {noteIdx:4, src:"rollouts/corl/ur10e_plushie/04_release.jpg", caption:"release"}
+    ],
+    // BT from the live SPARKPlanner (Gemini) call on the rollout's first frame (ur10e_rollouts/gemini_bt_plushie.yaml)
+    notes:[
+      {type:"detect",label:"plushie, bowl",params:{}},
+      {type:"grasp_se3",label:"plushie",params:{force:20,target_width:0.03}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"bowl",params:{offset_z:0.15}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  ur10e_utensils:{
+    name:"Utensils in Tray",
+    rollout:"corl/ur10e_utensils",
+    notePhase:["detect","grasp","lift","to tray","release","grasp","lift","to tray","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/ur10e_utensils/00_detect.jpg", caption:"detect"},
+      {noteIdx:1, src:"rollouts/corl/ur10e_utensils/01_grasp1.jpg", caption:"grasp spoon"},
+      {noteIdx:2, src:"rollouts/corl/ur10e_utensils/02_lift1.jpg", caption:"lift"},
+      {noteIdx:3, src:"rollouts/corl/ur10e_utensils/03_place1.jpg", caption:"to tray"},
+      {noteIdx:5, src:"rollouts/corl/ur10e_utensils/04_grasp2.jpg", caption:"grasp knife"},
+      {noteIdx:6, src:"rollouts/corl/ur10e_utensils/05_lift2.jpg", caption:"lift"},
+      {noteIdx:7, src:"rollouts/corl/ur10e_utensils/06_place2.jpg", caption:"to tray"},
+      {noteIdx:8, src:"rollouts/corl/ur10e_utensils/07_done.jpg", caption:"release"}
+    ],
+    // BT from the live SPARKPlanner (Gemini) call on the rollout's first frame (ur10e_rollouts/gemini_bt_utensils.yaml)
+    notes:[
+      {type:"detect",label:"spoon, knife, tray",params:{}},
+      {type:"grasp_se3",label:"spoon",params:{force:50,target_width:0.01}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"tray",params:{offset_x:0.06,offset_z:0.08}},
+      {type:"release",label:"",params:{}},
+      {type:"grasp_se3",label:"knife",params:{force:50,target_width:0.01}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"tray",params:{offset_x:-0.06,offset_z:0.08}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  fold:{
+    name:"T-shirt Fold",
+    rollout:"shirt_fold",
+    notePhase:["grasp","lift","fold","release","grasp","lift","fold","release","grasp","lift","fold","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/shirt_fold/keyframe_grasp_+Y_sleeve_sideview.png", caption:"grasp sleeve"},
+      {noteIdx:2, src:"rollouts/shirt_fold/keyframe_fold_+Y_sleeve_sideview.png", caption:"fold inward"},
+      {noteIdx:4, src:"rollouts/shirt_fold/keyframe_grasp_-Y_sleeve_sideview.png", caption:"grasp sleeve"},
+      {noteIdx:6, src:"rollouts/shirt_fold/keyframe_fold_-Y_sleeve_sideview.png", caption:"fold inward"},
+      {noteIdx:8, src:"rollouts/shirt_fold/keyframe_grasp_hem_sideview.png", caption:"grasp hem"},
+      {noteIdx:10, src:"rollouts/shirt_fold/keyframe_fold_hem_sideview.png", caption:"fold to collar"},
+      {noteIdx:11, src:"rollouts/shirt_fold/keyframe_end_sideview.png", caption:"release"}
+    ],
+    // Gemini BT generated from the rollout's annotated frame (shirt_fold/gemini_bt.yaml):
+    // each sleeve then the hem is grasped, lifted, drawn across the shirt body, released.
+    notes:[
+      {type:"grasp_se3",label:"+Y sleeve",params:{prefer_angled:true,force:15,target_width:0.006}},
+      {type:"move_relative",label:"lift",params:{dz:0.05}},
+      {type:"move_to_keypoint",label:"shirt",params:{offset_z:0.05}},
+      {type:"release",label:"",params:{}},
+      {type:"grasp_se3",label:"-Y sleeve",params:{prefer_angled:true,force:15,target_width:0.006}},
+      {type:"move_relative",label:"lift",params:{dz:0.05}},
+      {type:"move_to_keypoint",label:"shirt",params:{offset_z:0.05}},
+      {type:"release",label:"",params:{}},
+      {type:"grasp_se3",label:"hem",params:{prefer_angled:true,force:15,target_width:0.006}},
+      {type:"move_relative",label:"lift",params:{dz:0.05}},
+      {type:"move_to_keypoint",label:"shirt",params:{offset_x:0.15,offset_z:0.05}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  bimanual_fold:{
+    name:"Bimanual T-shirt Fold",
+    bimanual:true,
+    rollout:"bimanual_fold",
+    notePhase:["detect","detect","homed","homed","fold_left","hold_right","move_hem","fold_right","at_hem","at_hem","hem_folded","hem_folded","complete","complete"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/fold_bi_green/00_detect.jpg", caption:"detect"},
+      {noteIdx:2, src:"rollouts/corl/fold_bi_green/01_pinch_sleeves.jpg", caption:"pinch sleeves"},
+      {noteIdx:4, src:"rollouts/corl/fold_bi_green/02_fold_left.jpg", caption:"L folds"},
+      {noteIdx:7, src:"rollouts/corl/fold_bi_green/03_fold_right.jpg", caption:"R folds"},
+      {noteIdx:8, src:"rollouts/corl/fold_bi_green/04_pinch_hem.jpg", caption:"pinch hem"},
+      {noteIdx:10, src:"rollouts/corl/fold_bi_green/05_fold_collar.jpg", caption:"fold to collar"},
+      {noteIdx:12, src:"rollouts/corl/fold_bi_green/06_done.jpg", caption:"complete"}
+    ],
+    notes:[
+      // Time 0: Detect (sync)
+      {type:"detect",label:"SAM3 detect",params:{duration:1},arm:"left"},
+      {type:"detect",label:"SAM3 detect",params:{duration:1},arm:"right"},
+      // Time 1: Pinch sleeves (sync)
+      {type:"pinch",label:"left sleeve",params:{force:20},arm:"left"},
+      {type:"pinch",label:"right sleeve",params:{force:20},arm:"right"},
+      // Time 2: L folds sleeve, R holds (staggered — avoid collision)
+      {type:"fold_arch",label:"fold inward",params:{force:15},arm:"left"},
+      {type:"wait",label:"hold",params:{duration:2},arm:"right"},
+      // Time 3: L moves to hem, R folds sleeve (staggered)
+      {type:"move_to_keypoint",label:"hem",params:{offset_z:0.04},arm:"left"},
+      {type:"fold_arch",label:"fold inward",params:{force:15},arm:"right"},
+      // Time 4: Both pinch hem (sync barrier)
+      {type:"pinch",label:"hem left",params:{force:20},arm:"left"},
+      {type:"pinch",label:"hem right",params:{force:20},arm:"right"},
+      // Time 5: Both fold to collar (sync)
+      {type:"fold_arch",label:"fold to collar",params:{force:15},arm:"left"},
+      {type:"fold_arch",label:"fold to collar",params:{force:15},arm:"right"},
+      // Time 6: Release (sync)
+      {type:"release_arm",label:"",params:{},arm:"left"},
+      {type:"release_arm",label:"",params:{},arm:"right"}
+    ],
+    parallel_groups:[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13]]
+  },
+  bimanual_dustpan:{
+    name:"Bimanual Sweep",
+    bimanual:true,
+    notes:[
+      {type:"pick_with_arm",label:"dustpan",params:{force:60},arm:"left"},
+      {type:"pick_with_arm",label:"brush",params:{force:60},arm:"right"},
+      {type:"hold_in_place",label:"anchor",params:{force:40,dwell:15},arm:"left"},
+      {type:"sweep",label:"sweep",params:{force:30,n_passes:3},arm:"right"},
+      {type:"release_arm",label:"",params:{},arm:"left"},
+      {type:"release_arm",label:"",params:{},arm:"right"}
+    ],
+    parallel_groups:[[0,1],[2,3],[4,5]]
+  },
+  dustpan_prod:{
+    name:"Dustpan",
+    notes:[
+      {type:"grasp_se3",label:"brush",params:{force:60}},
+      {type:"sweep_to_container",label:"dustpan",params:{force:30,max_passes:4}}
+    ]
+  },
+  libero_bowl_stove:{
+    name:"Bowl on Stove (LIBERO)",
+    rollout:"corl/libero_bowl_stove",
+    notePhase:["approach","grasp","lift","to stove","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/libero_bowl_stove/00_approach.jpg", caption:"approach"},
+      {noteIdx:1, src:"rollouts/corl/libero_bowl_stove/01_grasp.jpg", caption:"grasp"},
+      {noteIdx:2, src:"rollouts/corl/libero_bowl_stove/02_lift.jpg", caption:"lift"},
+      {noteIdx:3, src:"rollouts/corl/libero_bowl_stove/03_at_stove.jpg", caption:"above stove"},
+      {noteIdx:4, src:"rollouts/corl/libero_bowl_stove/04_release.jpg", caption:"release"}
+    ],
+    // Executed plan from the LIBERO-Pro fair-run log (sv13_goal_task_verbose)
+    notes:[
+      {type:"move_to_keypoint",label:"bowl",params:{offset_z:0}},
+      {type:"grasp",label:"",params:{force:100}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"flat stove",params:{offset_z:0.05}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  capbench_stack:{
+    name:"Stack (CaP-Bench)",
+    rollout:"corl/capbench_stack",
+    notePhase:["to cube","grasp","to base","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/capbench_stack/00_at_cube.jpg", caption:"to cube A"},
+      {noteIdx:1, src:"rollouts/corl/capbench_stack/01_grasped.jpg", caption:"grasp"},
+      {noteIdx:2, src:"rollouts/corl/capbench_stack/02_over_base.jpg", caption:"over cube B"},
+      {noteIdx:3, src:"rollouts/corl/capbench_stack/03_stacked.jpg", caption:"release"}
+    ],
+    // The BT documented for the CaP-Bench Stack runs (paper appendix, 97% at 100 trials)
+    notes:[
+      {type:"move_to_keypoint",label:"cube A",params:{}},
+      {type:"grasp",label:"",params:{}},
+      {type:"move_to_keypoint",label:"cube B",params:{offset_z:0.08}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  libero_moka:{
+    name:"Both Moka Pots (LIBERO)",
+    rollout:"corl/libero_moka",
+    notePhase:["to pot","grasp","lift","to stove","release","to pot","grasp","lift","to stove","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/libero_moka/00_to_pot1.jpg", caption:"to pot 1"},
+      {noteIdx:1, src:"rollouts/corl/libero_moka/01_grasp1.jpg", caption:"grasp"},
+      {noteIdx:3, src:"rollouts/corl/libero_moka/02_to_stove1.jpg", caption:"to stove"},
+      {noteIdx:4, src:"rollouts/corl/libero_moka/03_release1.jpg", caption:"release"},
+      {noteIdx:5, src:"rollouts/corl/libero_moka/04_to_pot2.jpg", caption:"to pot 2"},
+      {noteIdx:6, src:"rollouts/corl/libero_moka/05_grasp2.jpg", caption:"grasp"},
+      {noteIdx:8, src:"rollouts/corl/libero_moka/06_to_stove2.jpg", caption:"to stove"},
+      {noteIdx:9, src:"rollouts/corl/libero_moka/07_done.jpg", caption:"done"}
+    ],
+    // BT from the live SPARKPlanner (Gemini) call on the rollout's first frame (supp/videos/gemini_bt_moka.yaml)
+    notes:[
+      {type:"move_to_keypoint",label:"left moka pot",params:{offset_z:0}},
+      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"flat stove",params:{offset_x:0.05,offset_z:0.04}},
+      {type:"release",label:"",params:{}},
+      {type:"move_to_keypoint",label:"right moka pot",params:{offset_z:0}},
+      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"flat stove",params:{offset_x:-0.05,offset_z:0.04}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  libero_basket:{
+    name:"Soup + Cheese to Basket (LIBERO)",
+    rollout:"corl/libero_basket",
+    notePhase:["to soup","grasp","lift","to basket","release","to cheese","grasp","lift","to basket","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/libero_basket/00_to_soup.jpg", caption:"to soup"},
+      {noteIdx:1, src:"rollouts/corl/libero_basket/01_grasp1.jpg", caption:"grasp"},
+      {noteIdx:3, src:"rollouts/corl/libero_basket/02_to_basket1.jpg", caption:"to basket"},
+      {noteIdx:4, src:"rollouts/corl/libero_basket/03_release1.jpg", caption:"release"},
+      {noteIdx:5, src:"rollouts/corl/libero_basket/04_to_cheese.jpg", caption:"to cheese"},
+      {noteIdx:6, src:"rollouts/corl/libero_basket/05_grasp2.jpg", caption:"grasp"},
+      {noteIdx:8, src:"rollouts/corl/libero_basket/06_to_basket2.jpg", caption:"to basket"},
+      {noteIdx:9, src:"rollouts/corl/libero_basket/07_release2.jpg", caption:"release"}
+    ],
+    // BT from the live SPARKPlanner (Gemini) call on the rollout's first frame (supp/videos/gemini_bt_basket.yaml).
+    // Benchmark log: SCENE1 soup+cheese->basket PASS (multi-step with home reset).
+    notes:[
+      {type:"move_to_keypoint",label:"alphabet soup",params:{offset_z:0}},
+      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"basket",params:{offset_z:0.15}},
+      {type:"release",label:"",params:{}},
+      {type:"move_to_keypoint",label:"cream cheese box",params:{offset_z:0}},
+      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"basket",params:{offset_z:0.15}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  capbench_wipe:{
+    name:"Wipe (CaP-Bench)",
+    rollout:"corl/capbench_wipe",
+    notePhase:["wipe"],
+    photos:[
+      {noteIdx:0, src:"rollouts/corl/capbench_wipe/01_wiping.jpg", caption:"raster wipe"}
+    ],
+    // Executed plan from the wipe run log (wipe_concentric_v5): one primitive, ten passes
+    notes:[
+      {type:"wipe",label:"brown table smudges",params:{sweep_width:0.2,sweep_length:0.4,num_passes:10}}
+    ]
+  },
+  capbench_lift:{
+    name:"Lift (CaP-Bench)",
+    // The BT documented for the CaP-Bench Lift runs (paper appendix, 100% at 100 trials)
+    notes:[
+      {type:"move_to_keypoint",label:"cube",params:{offset_z:0.05}},
+      {type:"grasp",label:"",params:{}},
+      {type:"move_relative",label:"lift",params:{dz:0.15}}
+    ]
+  }
+};
+
+// Medley: sweep + pour + fold (bimanual) + sponge, each its own normal staff,
+// rotated + translated into a ring (loop) in the XY plane. Pan to travel the loop.
+SCORES.medley={ name:"Medley (loop)", medley:true,
+  scores:["sweep_cubes","mug_pour","silverware","fold","sponge_soap","ur10e_plushie","ur10e_utensils","bimanual_fold","libero_basket","capbench_stack"] };
+
+// MUSIC MAPPINGS
+const GRASP=new Set(['grasp_se3','grasp','pick_with_arm','pinch']);
+const MOVE=new Set(['move_to_keypoint','move_relative','tilt_wrist']);
+const REL=new Set(['release','release_arm']);
+const LEGATO=new Set(['move_relative','move_to_keypoint']);
+const SUST=new Set(['pour','sweep','sweep_to_container','constrained_scrub','hold_in_place','wait','fold_arch','detect','wipe']);
+
+const CAT_COL={grasp:0x2563eb,move:0x059669,manipulate:0xd97706,release:0xdc2626};
+const CAT_HEX={grasp:'#2563eb',move:'#059669',manipulate:'#d97706',release:'#dc2626'};
+
+function cat(t){return GRASP.has(t)?'grasp':MOVE.has(t)?'move':REL.has(t)?'release':'manipulate'}
+function lane(t){return GRASP.has(t)?1:MOVE.has(t)?2:REL.has(t)?4:3}
+function dyn(p){const f=p.force||p.force_n||0;return f<=0?'':f<=15?'pp':f<=30?'p':f<=50?'mp':f<=60?'mf':f<=80?'f':'ff'}
+function noteVal(t,p){
+  if(SUST.has(t)){const d=p.max_pour_s||p.dwell||p.duration||((p.n_passes||1)*2)||3;return d>4?'whole':'half'}
+  if(GRASP.has(t))return'half';
+  if(t==='move_to_keypoint')return'quarter';
+  if(MOVE.has(t))return'eighth';
+  if(REL.has(t))return'eighth';
+  return'quarter';
+}
+
+function analyzeLegato(notes){
+  const ph=[];let hold=false,cur=[];
+  for(let i=0;i<notes.length;i++){
+    const t=notes[i].type;
+    if(GRASP.has(t))hold=true;
+    if(REL.has(t))hold=false;
+    if(LEGATO.has(t)&&(t!=='move_to_keypoint'||hold)){cur.push(i)}
+    else{if(cur.length>=2)ph.push([...cur]);cur=[]}
+  }
+  if(cur.length>=2)ph.push([...cur]);
+  return ph;
+}
+
+// THREE.JS
+const container=document.getElementById('container');
+const scene=new THREE.Scene();
+// Transparent background when ?export=png, else white
+const _urlP=new URLSearchParams(window.location.search);
+const EXPORT_MODE=_urlP.get('export')==='png';   // captures are static; never auto-spin
+const HERO=!EXPORT_MODE && _urlP.get('ui')==='0'; // embedded site hero: section separation on
+scene.background=EXPORT_MODE?null:new THREE.Color(0xffffff);
+
+THREE.Cache.enabled=true;   // cache photo images so live medley rebuilds don't re-fetch them
+
+const camera=new THREE.PerspectiveCamera(34,1,0.1,100);
+camera.position.set(0, 3, 16);
+
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.toneMapping=THREE.NoToneMapping;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+const ctrl=new OrbitControls(camera,renderer.domElement);
+ctrl.enableDamping=true;ctrl.dampingFactor=0.06;
+ctrl.target.set(0,0.5,0);ctrl.update();
+
+scene.add(new THREE.AmbientLight(0xffffff,1.2));
+const dl=new THREE.DirectionalLight(0xffffff,0.5);
+dl.position.set(3,8,6);scene.add(dl);
+
+// Axes at the origin (x = red, y = green, z = blue) for orientation reference.
+const axes=new THREE.AxesHelper(4);
+scene.add(axes);
+
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+let root=new THREE.Group(); scene.add(root);
+// Hero section-separation state (only used when HERO): per-section group + outward dir.
+let sectionGroups=[], sectionRadial=[], secPull=[], secHover=-1, secSel=-1, flatOverlay=null, heroVidEl=null;
+let introActive=false, introT=0, introMorph=[], introNotes=[], introHidden=[]; const INTRO_DUR=3.4;   // SPARK -> loop opening
+const HERO_VIDEO={sweep_cubes:'sweep2.mp4', mug_pour:'mug_pour2.mp4', silverware:'silverware.mp4', fold:'fold_single.mp4',
+  sponge_soap:'sponge2.mp4', ur10e_plushie:'ur10e_plushie.mp4', ur10e_utensils:'ur10e_utensils.mp4', bimanual_fold:'fold_bi_green.mp4',
+  libero_bowl_stove:'libero_bowl_stove.mp4', capbench_stack:'capbench_stack.mp4', capbench_lift:'capbench_lift.mp4',
+  libero_moka:'libero_moka.mp4', capbench_wipe:'capbench_wipe.mp4', libero_basket:'libero_basket.mp4'};
+const SEC_PULL=3.0;
+let staffG, noteG, annoG;   // current working groups, reassigned per score and parented under root
+let meshes=[],meshMap=new Map(),selMesh=null,curScore=null;
+function newCanvasGroups(parent){
+  staffG=new THREE.Group(); noteG=new THREE.Group(); annoG=new THREE.Group();
+  parent.add(staffG,noteG,annoG);
+}
+
+// SINE WAVE STAFF
+const W=16, AMP=2.0, PERIODS=1.5;
+const SL=5, LG=0.42, LR=0.025;
+let SCORE_XOFF=0;   // horizontal offset, used to lay scores side by side in the medley
+let VS=1;           // vertical scale: <1 shrinks a grand staff into one staff's height
+let flatNoBend=false; // when true, cPos drops the depth-bend (used for the flattened hero overlay)
+
+// Ribbon mode (medley): the loop is one smooth closed curve and the flat staff is warped
+// onto it. ribbonOn activates it; [ribU0,ribU1] is the arc the current score owns.
+let ribbonOn=false, ribU0=0, ribU1=1, ribFrontU=0, ribN=4;
+// Live-tunable loop params (driven by the control panel; defaults below).
+let ribR=20.4;          // loop radius (scaled so each of the 8 sections keeps the arc length the 4-section ring had)
+let ribHWOB=1.8;        // height-wobble amplitude
+let ribKW=2;            // height waves per loop (integer)
+let RIB_PERIODS=1;      // depth-bend cycles per section -- INTEGER keeps the bend slope matched
+                        // across every seam (no M-shaped kink); standalone scores keep PERIODS
+let ribAMP=2.0;         // depth-bend amplitude (along B, toward/away from the staff face)
+let ribLIFT=1.0;        // lift-bend amplitude (along U, the staff rising/falling in its own plane)
+let RIB_LIFT_PERIODS=1; // lift-bend cycles per section (INTEGER -> seam-safe like the depth bend)
+let ribSpin=0.5;        // loop spin speed
+// Per-section (per score) tuning, blended smoothly around the loop (sampleSec) so seams stay
+// closed. secTwist defaults reproduce the reversed front-flat twist; secBend/secLift = depth/lift mult.
+let secTwist=[0,-0.5,0.4,-0.4,0.5,-0.4,0.4,-0.4,0.4,-0.5];
+let secBend=[1,1,1,1,1,1,1,1,1,1];
+let secLift=[1,1,1,1,1,1,1,1,1,1];
+
+// Smooth periodic sample of a per-section array at loop parameter u: hits arr[i] at each
+// section centre and cosine-blends between, so the result is continuous (seams match).
+function sampleSec(arr,u){
+  u=((u%1)+1)%1;
+  const n=arr.length, c=u*n-0.5, i0=Math.floor(c), f=c-i0;
+  const a=arr[((i0%n)+n)%n], b=arr[(((i0+1)%n)+n)%n];
+  const w=0.5-0.5*Math.cos(Math.PI*f);
+  return a*(1-w)+b*w;
+}
+
+// The loop as a clean PARAMETRIC curve: a circle in XZ with a gentle vertical undulation.
+// Defining it directly (rather than splining through corner points) keeps the seams from
+// kinking into V / M shapes -- there are no corners, just a smooth closed curve.
+function ribbonPoint(u){
+  const ang=2*Math.PI*(u - 1/(2*ribN));    // score-0 centre sits at +Z (the front)
+  return new THREE.Vector3(ribR*Math.sin(ang), ribHWOB*Math.sin(2*Math.PI*ribKW*u), ribR*Math.cos(ang));
+}
+
+// Smoothly-varying frame at loop parameter u: position + {tangent, up, depth}. "up" is
+// world-up made perpendicular to the tangent, then rolled by a continuous twist; because
+// it is a continuous function of u, neighbouring scores share it exactly at every seam.
+function ribbonFrame(u){
+  u=((u%1)+1)%1;
+  const du=0.0015;
+  const p=ribbonPoint(u);
+  const a=ribbonPoint((u-du+1)%1), b=ribbonPoint((u+du)%1);
+  const T=new THREE.Vector3().subVectors(b,a).normalize();
+  const U=new THREE.Vector3(0,1,0).addScaledVector(T,-T.y).normalize();   // world-up perpendicular to T
+  const tw=sampleSec(secTwist,u);                                         // per-section twist, blended (continuous)
+  if(tw) U.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(T,tw));
+  const B=new THREE.Vector3().crossVectors(T,U).normalize();              // staff-bend (depth) direction
+  return {p,T,U,B};
+}
+
+function cPos(t,line,staveY){
+  staveY=staveY||0;
+  const offY=((line-(SL-1)/2)*LG + staveY)*VS;
+  if(ribbonOn){
+    const u=ribU0 + t*(ribU1-ribU0);
+    const offZ=ribAMP *sampleSec(secBend,u)*Math.sin(t*Math.PI*2*RIB_PERIODS);       // bend along B (depth)
+    const offU=ribLIFT*sampleSec(secLift,u)*Math.sin(t*Math.PI*2*RIB_LIFT_PERIODS);  // bend along U (lift)
+    const f=ribbonFrame(u);
+    return f.p.addScaledVector(f.U,offY+offU).addScaledVector(f.B,offZ);  // f.p is a fresh vector
+  }
+  const offZ=flatNoBend?0:AMP*Math.sin(t*Math.PI*2*PERIODS);
+  return new THREE.Vector3((t-0.5)*W + SCORE_XOFF, offY, offZ);
+}
+
+function cNorm(t){
+  if(ribbonOn) return ribbonFrame(ribU0 + t*(ribU1-ribU0)).B;
+  const dt=0.001;
+  const a=cPos(Math.max(0,t-dt),2), b=cPos(Math.min(1,t+dt),2);
+  const tg=new THREE.Vector3().subVectors(b,a).normalize();
+  const n=new THREE.Vector3(-tg.z,0,tg.x).normalize();
+  if(n.z<0)n.negate();
+  return n;
+}
+
+function orientGroup(group, tNorm){
+  if(ribbonOn){
+    const f=ribbonFrame(ribU0 + tNorm*(ribU1-ribU0));
+    group.setRotationFromMatrix(new THREE.Matrix4().makeBasis(f.T,f.U,f.B));
+    return;
+  }
+  const tg_dt=0.001;
+  const a=cPos(Math.max(0,tNorm-tg_dt),2), b=cPos(Math.min(1,tNorm+tg_dt),2);
+  const tangent=new THREE.Vector3().subVectors(b,a).normalize();
+  const up=new THREE.Vector3(0,1,0);
+  const normal=new THREE.Vector3().crossVectors(tangent,up).normalize();
+  if(normal.z<0)normal.negate();
+  const right=new THREE.Vector3().crossVectors(up,normal).normalize();
+  group.setRotationFromMatrix(new THREE.Matrix4().makeBasis(right,up,normal));
+}
+
+function drawStaff(staveY){
+  const _exp=new URLSearchParams(window.location.search).get('export')==='png';
+  const mat=new THREE.MeshBasicMaterial({color:_exp?0xd0d0d0:0x1a1a1a,transparent:_exp,opacity:_exp?0.3:1.0});
+  for(let l=0;l<SL;l++){
+    const pts=[];
+    for(let i=0;i<=140;i++)pts.push(cPos(i/140,l,staveY));
+    const curve=new THREE.CatmullRomCurve3(pts);
+    const m=new THREE.Mesh(new THREE.TubeGeometry(curve,140,LR,8,false),mat);
+    m.userData.isStaff=true; m.userData.lp=pts;   // store loop points so the SPARK intro can morph THIS staff
+    staffG.add(m);
+  }
+}
+
+function drawBarline(t,thick,staveY,spanBoth){
+  const _exp=new URLSearchParams(window.location.search).get('export')==='png';
+  const mat=new THREE.MeshBasicMaterial({color:_exp?0xd0d0d0:0x1a1a1a,transparent:_exp,opacity:_exp?0.3:1.0});
+  const topLine = spanBoth ? SL-1 : SL-1;
+  const botLine = 0;
+  const topStave = spanBoth ? (staveY||0) + 1.2 : (staveY||0);
+  const botStave = spanBoth ? (staveY||0) - 1.2 : (staveY||0);
+  const top=cPos(t,topLine,topStave);
+  const bot=cPos(t,botLine,botStave);
+  top.y+=LG*0.2*VS; bot.y-=LG*0.2*VS;
+  const curve=new THREE.LineCurve3(bot,top);
+  const r=thick?0.024:0.014;
+  staffG.add(new THREE.Mesh(new THREE.TubeGeometry(curve,2,r,6,false),mat));
+}
+
+function drawDoubleBar(t,staveY,spanBoth){
+  const n=cNorm(t);
+  const g=new THREE.Group();
+  // Thin bar
+  drawBarline(t,false,staveY,spanBoth);
+  // We need a second bar offset along the normal - approximate by small t shift
+  const t2 = Math.min(1, t + 0.012);
+  drawBarline(t2,true,staveY,spanBoth);
+}
+
+// TREBLE CLEF (Unicode glyph)
+function drawClef(ctx,cx,cy,s){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.fillStyle='#1a1a1a';
+  ctx.font=`${Math.round(120*s)}px serif`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText('𝄞',0,0);
+  ctx.restore();
+}
+
+function clefSprite(t,staveY){
+  const c=document.createElement('canvas');
+  c.width=256;c.height=512;
+  drawClef(c.getContext('2d'),128,256,2.2);
+  const tex=new THREE.CanvasTexture(c);
+  tex.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  const p=cPos(t,2,staveY);
+  sp.position.copy(p);
+  sp.position.add(cNorm(t).multiplyScalar(0.02));
+  sp.scale.set(1.0*VS, SL*LG*1.4*VS, 1);
+  return sp;
+}
+
+// Bass clef (Unicode glyph)
+function drawBassClef(ctx,cx,cy,s){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.fillStyle='#1a1a1a';
+  ctx.font=`${Math.round(100*s)}px serif`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText('𝄢',0,0);
+  ctx.restore();
+}
+
+function bassClefSprite(t,staveY){
+  const c=document.createElement('canvas');
+  c.width=256;c.height=384;
+  drawBassClef(c.getContext('2d'),128,192,2.0);
+  const tex=new THREE.CanvasTexture(c);
+  tex.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  const p=cPos(t,2,staveY);
+  sp.position.copy(p);
+  sp.position.add(cNorm(t).multiplyScalar(0.02));
+  sp.scale.set(0.9*VS, SL*LG*1.2*VS, 1);
+  return sp;
+}
+
+// Grand staff brace {
+function braceSprite(t,topY,botY){
+  const c=document.createElement('canvas');
+  c.width=64;c.height=400;
+  const ctx=c.getContext('2d');
+  ctx.strokeStyle='#1a1a1a';ctx.lineWidth=4;ctx.lineCap='round';
+  const h=380,mid=200;
+  ctx.beginPath();
+  ctx.moveTo(40,10);
+  ctx.bezierCurveTo(20,10,16,mid-30,10,mid);
+  ctx.bezierCurveTo(16,mid+30,20,h-10,40,h);
+  ctx.stroke();
+  // center point
+  ctx.beginPath();ctx.moveTo(10,mid);ctx.lineTo(4,mid);ctx.stroke();
+
+  const tex=new THREE.CanvasTexture(c);
+  tex.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  const p=cPos(t,2,(topY+botY)/2);
+  sp.position.copy(p);
+  sp.position.x -= 0.6;
+  sp.position.add(cNorm(t).multiplyScalar(0.2));
+  sp.scale.set(0.5*VS, ((topY-botY)+SL*LG+0.5)*VS, 1);
+  return sp;
+}
+
+// TIME SIGNATURE
+function timeSigSprite(t,staveY){
+  const c=document.createElement('canvas');
+  c.width=80;c.height=160;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#1a1a1a';ctx.font='bold 58px system-ui,sans-serif';ctx.textAlign='center';
+  ctx.fillText('4',40,55);ctx.fillText('4',40,115);
+  const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+  const p=cPos(t,2,staveY);
+  sp.position.copy(p);sp.position.add(cNorm(t).multiplyScalar(0.15));
+  sp.scale.set(0.5*VS,1.0*VS,1);
+  return sp;
+}
+
+// NOTE CREATION
+function makeNote(nd,tNorm,staffLine,idx,isLeg,staveY){
+  const c=cat(nd.type),color=CAT_COL[c];
+  const nv=noteVal(nd.type,nd.params);
+  const isOpen=nv==='whole'||nv==='half';
+  const group=new THREE.Group();
+  const pos=cPos(tNorm,staffLine,staveY);
+
+  const hw=0.20,hh=0.15,hd=0.08;
+  let hitMesh;
+
+  if(isOpen){
+    // Open note: colored ellipsoid with white center (ring effect)
+    const outerG=new THREE.SphereGeometry(1,16,12);
+    outerG.scale(hw,hh,hd);
+    const outerM=new THREE.MeshStandardMaterial({color,metalness:0.05,roughness:0.7});
+    const outer=new THREE.Mesh(outerG,outerM);
+    outer.rotation.z=-0.25;
+    group.add(outer);
+
+    const innerG=new THREE.SphereGeometry(1,16,12);
+    innerG.scale(hw*0.52,hh*0.52,hd*1.3);
+    const innerM=new THREE.MeshBasicMaterial({color:0xffffff});
+    const inner=new THREE.Mesh(innerG,innerM);
+    inner.rotation.z=-0.25;
+    group.add(inner);
+
+    hitMesh=outer;
+  } else {
+    // Filled note
+    const g=new THREE.SphereGeometry(1,16,12);
+    g.scale(hw,hh,hd);
+    const m=new THREE.MeshStandardMaterial({color,metalness:0.05,roughness:0.7});
+    const h=new THREE.Mesh(g,m);
+    h.rotation.z=-0.25;
+    group.add(h);
+    hitMesh=h;
+  }
+
+  // Stem — up-stems attach to the RIGHT of the notehead, down-stems to the LEFT
+  if(nv!=='whole'){
+    const stemH=0.7, stemDir=staffLine>=2.5?-1:1;
+    const stemX=stemDir>0?hw*0.7:-hw*0.7;
+    const sg=new THREE.CylinderGeometry(0.014,0.014,stemH,4);
+    const sm=new THREE.MeshBasicMaterial({color:0x000000});
+    const st=new THREE.Mesh(sg,sm);
+    st.position.set(stemX,stemDir*stemH/2,0);
+    group.add(st);
+
+    if(nv==='eighth'){
+      // Solid filled flag, drawn in the note's plane so it tilts with the stem
+      // and reads as an extension of it. Canvas left edge = stem side.
+      const fc=document.createElement('canvas');fc.width=48;fc.height=80;
+      const fx=fc.getContext('2d');
+      fx.fillStyle='#000000';
+      fx.beginPath();
+      if(stemDir>0){            // up-stem: attach at top, sweep down-right
+        fx.moveTo(6,2);
+        fx.bezierCurveTo(46,16,40,46,16,78);
+        fx.bezierCurveTo(34,48,30,28,6,22);
+      }else{                    // down-stem: attach at bottom, sweep up-right
+        fx.moveTo(6,78);
+        fx.bezierCurveTo(46,64,40,34,16,2);
+        fx.bezierCurveTo(34,32,30,52,6,58);
+      }
+      fx.closePath();fx.fill();
+      const ft=new THREE.CanvasTexture(fc);ft.minFilter=THREE.LinearFilter;ft.colorSpace=THREE.SRGBColorSpace;
+      const fw=0.24, fh=0.40;
+      const fl=new THREE.Mesh(new THREE.PlaneGeometry(fw,fh),
+        new THREE.MeshBasicMaterial({map:ft,transparent:true,side:THREE.DoubleSide,depthTest:false}));
+      // attach point (canvas left, stem-tip end) -> stem tip on the stem's x
+      fl.position.set(stemX + fw*0.5 - 0.03, stemDir*(stemH - fh*0.5 + 0.02), 0.002);
+      group.add(fl);
+    }
+  }
+
+  // Staccato dot — brief, detached actions only. A grasp is the onset of the
+  // held (legato) phrase that follows, so it is not staccato.
+  if(!isLeg&&!SUST.has(nd.type)&&!GRASP.has(nd.type)){
+    const dg=new THREE.SphereGeometry(0.035,8,6);
+    const dm=new THREE.MeshBasicMaterial({color:0x333333});
+    const d=new THREE.Mesh(dg,dm);
+    d.position.set(0,staffLine>=2.5?0.28:-0.28,0);
+    group.add(d);
+  }
+
+  // Accent — emphasize high-force events (mf and above ~55N), not "every grasp".
+  // Placed opposite the stem, matching the staccato-dot side.
+  if((nd.params.force||nd.params.force_n||0)>=55){
+    const ac=document.createElement('canvas');ac.width=40;ac.height=28;
+    const ax=ac.getContext('2d');
+    ax.strokeStyle='#000000';ax.lineWidth=4;ax.lineCap='round';ax.lineJoin='round';
+    ax.beginPath();ax.moveTo(6,22);ax.lineTo(20,6);ax.lineTo(34,22);ax.stroke();
+    const at=new THREE.CanvasTexture(ac);at.colorSpace=THREE.SRGBColorSpace;
+    const as2=new THREE.Sprite(new THREE.SpriteMaterial({map:at,transparent:true,depthTest:false}));
+    as2.position.set(0,staffLine>=2.5?0.34:-0.34,0);
+    as2.scale.set(0.24,0.16,1);
+    group.add(as2);
+  }
+
+  // Invisible hit sphere (much larger for easy clicking)
+  const hitGeo=new THREE.SphereGeometry(0.35,8,6);
+  const hitMat2=new THREE.MeshBasicMaterial({visible:false,transparent:true,opacity:0});
+  const hitSphere=new THREE.Mesh(hitGeo,hitMat2);
+  group.add(hitSphere);
+
+  // Position + orient (note glyphs shrink with the staff via VS)
+  group.position.copy(pos);
+  group.position.add(cNorm(tNorm).multiplyScalar(0.06));
+  orientGroup(group,tNorm);
+  group.scale.multiplyScalar(VS);
+
+  hitSphere.userData={noteIndex:idx,group,visualMesh:hitMesh};
+  meshMap.set(hitSphere,{data:nd,index:idx,group,isLeg,visualMesh:hitMesh});
+  meshes.push(hitSphere);
+  return group;
+}
+
+// PRIMITIVE LABELS (monospace, near note)
+const SHORT_NAMES={
+  'move_to_keypoint':'move_to_kp',
+  'move_relative':'move_rel',
+  'constrained_scrub':'scrub',
+  'grasp_se3':'grasp_se3',
+  'release_arm':'release',
+  'pick_with_arm':'pinch',
+  'fold_arch':'fold_arch',
+};
+function shortLabel(t){return SHORT_NAMES[t]||t}
+
+function primLabelSprite(text){
+  const c=document.createElement('canvas');c.width=1024;c.height=160;
+  const ctx=c.getContext('2d');
+  ctx.font='600 80px ui-monospace, Menlo, monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#000000';
+  ctx.fillText(text.length>16?text.slice(0,14)+'…':text,512,80);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.colorSpace=THREE.SRGBColorSpace;
+  // A plane (not a billboard sprite) so the label lies in the staff plane and twists
+  // with it. The caller positions, scales, and orients it via orientGroup.
+  const sp=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+    new THREE.MeshBasicMaterial({map:t,transparent:true,depthTest:false,side:THREE.DoubleSide}));
+  return sp;
+}
+
+// PHOTO PLANES
+const _photoLoadPromises = [];
+
+function addPhotoPlane(src, tNorm, staveY, pw, ph, photoGroup){
+  // Position AND orientation are captured now, synchronously: photos load async, and by
+  // the time a load callback fires, ribU0/ribU1 have moved on to a later score's arc.
+  let photoCenter;
+  if(ribbonOn){
+    const f=ribbonFrame(ribU0 + tNorm*(ribU1-ribU0));
+    photoCenter = cPos(tNorm, SL-1, staveY).addScaledVector(f.U, ph/2 + 0.35);  // above the top line, up the staff
+  } else {
+    photoCenter = cPos(tNorm, 2, staveY);
+    photoCenter.y = ((staveY||0) + SL*LG*0.5)*VS + ph/2 + 0.35;
+  }
+  const _o=new THREE.Object3D(); orientGroup(_o, tNorm); const photoQuat=_o.quaternion.clone();
+
+  const loadP = new Promise((resolve) => {
+    const loader = new THREE.TextureLoader();
+    loader.load(src, (tex) => {
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const planeG = new THREE.PlaneGeometry(pw, ph);
+      const planeM = new THREE.MeshBasicMaterial({map:tex, transparent:false, side:THREE.DoubleSide});
+      const plane = new THREE.Mesh(planeG, planeM);
+      plane.position.copy(photoCenter);
+      plane.quaternion.copy(photoQuat);
+      photoGroup.add(plane);
+      if(introActive){ plane.visible=false; introHidden.push(plane); }   // stay hidden until the intro reveals
+      resolve();
+    }, undefined, () => {
+      console.warn('Photo not found:', src);
+      resolve();
+    });
+  });
+  _photoLoadPromises.push(loadP);
+}
+
+// ANNOTATIONS
+function textSprite(text,fontSize,color){
+  const c=document.createElement('canvas');c.width=768;c.height=128;
+  const ctx=c.getContext('2d');
+  ctx.font=`600 ${fontSize*3}px system-ui,sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=color;
+  ctx.fillText(text.length>24?text.slice(0,22)+'…':text,384,64);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;
+  return new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
+}
+
+function dynMark(tNorm,text,staveY){
+  // Bold-italic serif (musical convention), pure black, sRGB-tagged so it stays black.
+  const c=document.createElement('canvas');c.width=256;c.height=160;
+  const ctx=c.getContext('2d');
+  ctx.font='italic 800 116px Georgia,"Times New Roman",serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#0a0a0a';
+  ctx.fillText(text,128,90);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.colorSpace=THREE.SRGBColorSpace;
+  // Plane, oriented into the staff plane so it twists with the staff (like the notes).
+  const sp=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+    new THREE.MeshBasicMaterial({map:t,transparent:true,depthTest:false,side:THREE.DoubleSide}));
+  // Below the staff — the conventional position for dynamics.
+  sp.position.copy(cPos(tNorm,-1.0,staveY));
+  sp.position.add(cNorm(tNorm).multiplyScalar(0.08));
+  sp.scale.set(0.5*VS,0.31*VS,1);
+  orientGroup(sp,tNorm);
+  return sp;
+}
+
+function label(tNorm,text,staffLine,color,staveY){
+  const sp=textSprite(text,17,color||'#777');
+  sp.position.copy(cPos(tNorm,staffLine,staveY));
+  sp.position.y+=staffLine>=2.5?-0.42:0.52;
+  sp.position.add(cNorm(tNorm).multiplyScalar(0.08));
+  sp.scale.set(1.0,0.18,1);
+  return sp;
+}
+
+function legatoSlur(positions){
+  if(positions.length<2)return null;
+  const f=positions[0],l=positions[positions.length-1];
+  const mid=f.clone().lerp(l,0.5);
+  mid.y+=0.55;
+  const curve=new THREE.QuadraticBezierCurve3(
+    f.clone().add(new THREE.Vector3(0,0.26,0)),
+    mid,
+    l.clone().add(new THREE.Vector3(0,0.26,0))
+  );
+  const g=new THREE.TubeGeometry(curve,40,0.014,6,false);
+  return new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x444444,transparent:true,opacity:0.5}));
+}
+
+function crescendo(t1,t2,growing,staveY){
+  const g=new THREE.Group();
+  const mat=new THREE.MeshBasicMaterial({color:0x555555});
+  for(const sign of[1,-1]){
+    const pts=[];
+    for(let i=0;i<=24;i++){
+      const t=t1+(t2-t1)*i/24;
+      const p=cPos(t,-0.9,staveY);
+      const spread=(growing?i/24:1-i/24)*0.10;
+      pts.push(p.clone().add(new THREE.Vector3(0,sign*spread,0)));
+    }
+    const curve=new THREE.CatmullRomCurve3(pts);
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve,24,0.006,4,false),mat));
+  }
+  return g;
+}
+
+// LOAD SCORE
+function clear(){
+  // dispose geometries/materials/textures so repeated live rebuilds don't leak GPU memory
+  root.traverse(o=>{
+    if(o.geometry) o.geometry.dispose();
+    if(o.material){ const ms=Array.isArray(o.material)?o.material:[o.material];
+      ms.forEach(m=>{ if(m.map) m.map.dispose(); m.dispose(); }); }
+  });
+  root.clear();
+  meshes=[];meshMap.clear();selMesh=null;
+  _photoLoadPromises.length=0;
+}
+
+function load(key){
+  const wasMedley = !!(curScore && curScore.medley);
+  clear();
+  ribbonOn=false;                            // flat unless a medley turns ribbon mode on
+  const score=SCORES[key];if(!score)return;
+  curScore=score;
+  if(!(wasMedley && score.medley)) root.rotation.set(0,0,0);   // keep spin only across live medley rebuilds
+  SCORE_XOFF=0;
+  const panel=document.getElementById('panel');
+  if(panel) panel.style.display = (score.medley && !EXPORT_MODE) ? 'block' : 'none';
+
+  if(score.medley){
+    // The loop is one smooth parametric curve (circle in XZ + gentle vertical undulation).
+    // Each score owns an arc [i/N,(i+1)/N]; cPos warps its flat staff onto that arc with the
+    // continuous ribbonFrame. Neighbours share the frame exactly at each seam, so the full
+    // staff width lines up with no kink; continuity lets the ribbon (or one section) twist.
+    // (Shape params are live-tunable via the control panel -- not reset here.)
+    const N=score.scores.length;
+    ribbonOn=true; ribN=N;
+    ribFrontU=1/(2*N);                              // centre of score 0 = the front (twist 0 here)
+    if(secTwist.length!==N){ secTwist=new Array(N).fill(0); secBend=new Array(N).fill(1); secLift=new Array(N).fill(1); }
+    if(HERO){ destroyFlatOverlay(); sectionGroups=[]; sectionRadial=[]; secPull=[]; secHover=-1; secSel=-1; }
+    score.scores.forEach((k,i)=>{
+      const p=new THREE.Group(); root.add(p); newCanvasGroups(p);   // identity: cPos already returns loop-space coords
+      ribU0=i/N; ribU1=(i+1)/N;                                     // this score's arc of the loop
+      renderStaff(SCORES[k], true);                                 // medley: no clefs / time sigs
+      if(HERO){
+        p.traverse(o=>{ o.userData.sec=i; });                      // make every part of the section pickable as section i
+        sectionGroups[i]=p; secPull[i]=0;
+        const cp=ribbonPoint((i+0.5)/N); sectionRadial[i]=new THREE.Vector3(cp.x,0,cp.z).normalize();
+      }
+    });
+    const fp=ribbonPoint(ribFrontU);                                // front of the ribbon
+    camera.position.set(0, fp.y+3, fp.z+16); ctrl.target.set(0, fp.y+0.3, fp.z); ctrl.update();
+    if(_urlP.get('overview')==='1'){
+      camera.position.set(ribR*0.3, ribR*2.6, ribR*2.6); ctrl.target.set(0,0,0); ctrl.update();
+    }
+    if(HERO && _urlP.get('nointro')!=='1') buildIntro();            // SPARK -> loop opening
+    return;
+  }
+
+  newCanvasGroups(root);
+  camera.position.set(0,3,16); ctrl.target.set(0,0.5,0); ctrl.update();
+  renderStaff(score);
+}
+
+function renderStaff(score, medley, noPhotos){
+  const notes=score.notes,N=notes.length;
+  const phrases=analyzeLegato(notes);
+  const isBi=!!score.bimanual;
+  const noClefs=!!medley;   // the medley loop is an abstract visual: drop clefs + time sigs
+  // A grand staff (two staves + brace) is ~2.4x taller than a single staff. Shrink
+  // it into one staff's vertical envelope so a bimanual score sits at the same
+  // height as its single-arm neighbors in the medley ring, split in half by the
+  // two clefs. Everything vertical (lines, gap, glyphs, notes) scales by VS.
+  VS = isBi ? 0.42 : 1;
+
+  // (staves are drawn per-row below, once the row layout is computed)
+
+  // Time slots
+  let timeSlots=[];
+  if(score.parallel_groups){
+    let t=0;const asg=new Set();
+    for(const pg of score.parallel_groups){for(const i of pg){timeSlots[i]=t;asg.add(i)}t++}
+    for(let i=0;i<N;i++)if(!asg.has(i)){timeSlots[i]=t;t++}
+  }else{for(let i=0;i<N;i++)timeSlots[i]=i}
+  const maxT=Math.max(...timeSlots);
+
+  // Multi-system layout: ?rows=N stacks N full-width staves (a real multi-line score).
+  // rows=1 (default) = single line. Each row holds one slot-window of the score.
+  const _segp=new URLSearchParams(window.location.search);
+  // ?nwin=N&win=r renders ONLY window r's notes on a single full-width staff (same framing as a
+  // single capture). The exporter renders each window this way and stacks them -> a multi-line score
+  // with no single-camera height limit. (?rows=N is the older single-frame stacking, kept for the app.)
+  const NWIN=Math.max(1, parseInt(_segp.get('nwin'))||1);
+  const WIN=parseInt(_segp.get('win'))||0;
+  const _useWin = NWIN>1;
+  const ROWS = _useWin ? 1 : Math.max(1, parseInt(_segp.get('rows'))||1);
+  const _slotsTotal=maxT+1;
+  const _perRow=Math.ceil(_slotsTotal/(_useWin?NWIN:ROWS));
+  const _winStart=WIN*_perRow, _winEnd=_winStart+_perRow;
+  const ROW_SPACING=isBi?3.2:4.3;
+  const rowY=(r)=> ((ROWS-1)/2 - r)*ROW_SPACING;            // row 0 on top
+  const rowOf=(i)=> _useWin ? 0 : Math.min(ROWS-1, Math.floor(timeSlots[i]/_perRow));
+  const staveYOf=(i)=> rowY(rowOf(i)) + (isBi ? (notes[i].arm==='left'?-1.2:1.2) : 0);
+  const inSeg=(i)=> !_useWin || (timeSlots[i]>=_winStart && timeSlots[i]<_winEnd);
+  const tOf=(i)=>{
+    if(_useWin){ const lm=Math.min(_slotsTotal,_winEnd)-_winStart-1; return lm>0?(timeSlots[i]-_winStart)/lm*0.65+0.20:0.5; }
+    const r=rowOf(i), s=r*_perRow, lm=Math.min(_slotsTotal,(r+1)*_perRow)-s-1;
+    return lm>0 ? (timeSlots[i]-s)/lm*0.65+0.20 : 0.5;
+  };
+
+  // Staves + clefs + time signatures, one system per row (per arm if bimanual)
+  for(let r=0;r<ROWS;r++){
+    const ry=rowY(r);
+    if(isBi){
+      drawStaff(ry+1.2); drawStaff(ry-1.2);
+      if(!noClefs){
+        annoG.add(clefSprite(0.06,ry+1.2)); annoG.add(bassClefSprite(0.06,ry-1.2));
+        annoG.add(timeSigSprite(0.12,ry+1.2)); annoG.add(timeSigSprite(0.12,ry-1.2));
+      }
+      if(!noClefs) annoG.add(braceSprite(0.005,ry+1.2,ry-1.2));   // brace only in the flat/standalone view; it pokes out of the warped ribbon
+    } else {
+      drawStaff(ry);
+      if(!noClefs){ annoG.add(clefSprite(0.06,ry)); annoG.add(timeSigSprite(0.12,ry)); }
+    }
+  }
+
+  // Opening barline (single-row only)
+  if(ROWS===1) drawBarline(0.005,true,0,isBi);
+
+  const positions=[];
+  let prevDynLvl=0;
+
+  for(let i=0;i<N;i++){
+    if(!inSeg(i)) continue;
+    const n=notes[i];
+    const tN=tOf(i);
+    const sl=lane(n.type);
+    const isLP=phrases.some(p=>p.includes(i));
+
+    // Stave Y for this note's row (and arm, if bimanual)
+    let stY=staveYOf(i);
+
+    positions[i]=cPos(tN,sl,stY).clone();
+    noteG.add(makeNote(n,tN,sl,i,isLP,stY));
+
+    // Primitive name label — alternate above/below the stave
+    // For bimanual: only label one note per parallel group (skip if partner already labeled)
+    let skipLabel = false;
+    if(isBi && score.parallel_groups){
+      for(const pg of score.parallel_groups){
+        // Skip the partner's label only when both arms do the SAME action (a true
+        // synchronized pair). When they differ (e.g. one folds while the other moves
+        // to the hem), label both so the stagger is visible.
+        if(pg.includes(i) && pg.indexOf(i) > 0 && notes[i].type === notes[pg[0]].type){
+          skipLabel = true;
+        }
+      }
+    }
+    if(!skipLabel){
+      const sn = shortLabel(n.type);
+      const primLabel = primLabelSprite(sn);
+      // Place label right below or above its note's staff line
+      const noteLine = sl; // sl = lane(n.type): grasp=1, move=2, manip=3, release=4
+      let labelLine;
+      if(noteLine === 4){
+        labelLine = noteLine - 2.6; // release: drop well below the (red) note, clear of head+stem
+      } else if(noteLine === 3){
+        labelLine = noteLine - 2.3; // manipulate (detect/scrub/fold_arch): drop further below the orange note
+      } else {
+        labelLine = noteLine - 1.4; // grasp/move: label below the note
+      }
+      const primLabelPos = cPos(tN, labelLine, stY);
+      primLabelPos.add(cNorm(tN).multiplyScalar(0.06));
+      primLabel.position.copy(primLabelPos);
+      primLabel.scale.set(3.2*VS, 0.55*VS, 1);
+      orientGroup(primLabel, tN);   // lie in the staff plane so the label twists with it
+      annoG.add(primLabel);
+    }
+
+    const d=dyn(n.params);
+    if(d){
+      annoG.add(dynMark(tN,d,stY));
+      const lvl='pppmpmffff'.indexOf(d);
+      if(ROWS===1&&i>0&&prevDynLvl>0&&Math.abs(lvl-prevDynLvl)>=4){
+        const prevT=tOf(i-1);
+        annoG.add(crescendo(prevT,tN,lvl>prevDynLvl,stY));
+      }
+      prevDynLvl=lvl;
+    }
+  }
+
+  // Phase labels removed — photos and primitive labels are sufficient
+
+  // Barlines between phrases (single-line only)
+  if(ROWS===1) for(let i=0;i<N-1;i++){
+    const samePh=phrases.some(p=>p.includes(i)&&p.includes(i+1));
+    if(!samePh&&timeSlots[i]!==timeSlots[i+1]){
+      const midT=((timeSlots[i]+timeSlots[i+1])/2)/maxT*0.65+0.20;
+      drawBarline(midT,false,0,isBi);
+    }
+  }
+
+  // Final double barline (single-row only)
+  if(ROWS===1){
+    const endT=0.90;
+    drawBarline(endT,false,0,isBi);
+    drawBarline(endT+0.012,true,0,isBi);
+  }
+
+  // Legato slurs: only over notes actually placed in this window (positions[i] defined),
+  // otherwise legatoSlur dereferences an undefined position and throws.
+  if(ROWS===1) for(const ph of phrases){
+    const slur=legatoSlur(ph.filter(i=>inSeg(i) && positions[i]).map(i=>positions[i]));
+    if(slur)annoG.add(slur);
+  }
+
+  // Photo planes — per row, this row's photos spaced across the staff above the notes
+  if(score.photos && score.photos.length > 0 && !noPhotos){
+    for(let r=0;r<ROWS;r++){
+      const rowPhotos = score.photos.filter(p => rowOf(p.noteIdx)===r && inSeg(p.noteIdx));
+      const nP = rowPhotos.length; if(!nP) continue;
+      const tStart = 0.16, tEnd = 0.88;
+      const tStep = (tEnd - tStart) / Math.max(1, nP);
+      const pwStep = Math.min(tStep, (tEnd - tStart) / 5);                      // photos never exceed their 5-photo size (a 1-photo score otherwise spans the staff)
+      const pw = isBi ? Math.min(pwStep * W * 0.92, 1.7) : pwStep * W * 0.92;
+      const ph = pw * 0.75;  // 4:3 aspect ratio
+      const sY = rowY(r) + (isBi ? 1.2 : 0);
+      for(let pi = 0; pi < nP; pi++){
+        const tCenter = tStart + tStep * (pi + 0.5);
+        addPhotoPlane(rowPhotos[pi].src, tCenter, sY, pw, ph, annoG);
+      }
+    }
+  }
+
+  score._phrases=phrases;
+}
+
+// INTERACTION
+const tooltip=document.getElementById('tooltip');
+let hoveredGroup=null;
+
+function castRay(e){
+  const r=renderer.domElement.getBoundingClientRect();
+  mouse.x=((e.clientX-r.left)/r.width)*2-1;
+  mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  return raycaster.intersectObjects(meshes,false);
+}
+
+// Hover highlight (note-level; disabled in the embedded hero, which uses section separation)
+renderer.domElement.addEventListener('pointermove',e=>{
+  if(HERO)return;
+  const hits=castRay(e);
+  if(hits.length>0){
+    const info=meshMap.get(hits[0].object);
+    if(info&&hoveredGroup!==info.group){
+      if(hoveredGroup&&hoveredGroup!==info.group){
+        const prev=meshMap.get(selMesh);
+        if(!selMesh||meshMap.get(selMesh)?.group!==hoveredGroup){
+          hoveredGroup.scale.set(1,1,1);
+        }
+      }
+      hoveredGroup=info.group;
+      if(!selMesh||meshMap.get(selMesh)?.group!==hoveredGroup){
+        hoveredGroup.scale.set(1.1,1.1,1.1);
+      }
+      renderer.domElement.style.cursor='pointer';
+    }
+  } else {
+    if(hoveredGroup&&(!selMesh||meshMap.get(selMesh)?.group!==hoveredGroup)){
+      hoveredGroup.scale.set(1,1,1);
+    }
+    hoveredGroup=null;
+    renderer.domElement.style.cursor='crosshair';
+  }
+});
+
+// Click to select + show tooltip (note-level; disabled in the embedded hero)
+renderer.domElement.addEventListener('click',e=>{
+  if(HERO)return;
+  const hits=castRay(e);
+  if(hits.length>0){
+    const info=meshMap.get(hits[0].object);
+    if(info){
+      // Deselect previous
+      if(selMesh){
+        const prev=meshMap.get(selMesh);
+        if(prev&&prev.visualMesh){
+          prev.visualMesh.material.emissive=new THREE.Color(0);
+          prev.group.scale.set(1,1,1);
+        }
+      }
+      // Select new
+      selMesh=hits[0].object;
+      if(info.visualMesh){
+        info.visualMesh.material.emissive=new THREE.Color(CAT_COL[cat(info.data.type)]);
+        info.visualMesh.material.emissiveIntensity=0.5;
+      }
+      info.group.scale.set(1.18,1.18,1.18);
+
+      // Show tooltip
+      const nd=info.data;
+      const c=cat(nd.type);
+      const d=dyn(nd.params);
+      const nv=noteVal(nd.type,nd.params);
+      const art=info.isLeg?'legato':'staccato';
+      tooltip.innerHTML=
+        `<div style="font-weight:600;color:${CAT_HEX[c]};margin-bottom:4px">${nd.type}</div>`+
+        (nd.label?`<div style="color:#666;margin-bottom:6px">${nd.label}</div>`:'')+
+        `<div style="color:#888;font-size:10px">`+
+        `${nv} note, ${art}`+
+        (d?`, <span style="font-style:italic">${d}</span> (${nd.params.force||nd.params.force_n}N)`:'')+
+        `</div>`;
+      tooltip.style.display='block';
+      tooltip.style.left=Math.min(e.clientX+16, window.innerWidth-280)+'px';
+      tooltip.style.top=Math.min(e.clientY-20, window.innerHeight-100)+'px';
+
+      // Load rollout frame if available
+      const scoreKey=document.getElementById('score-select').value;
+      showFrameInTooltip(tooltip,scoreKey,info.index);
+    }
+  } else {
+    // Deselect
+    if(selMesh){
+      const prev=meshMap.get(selMesh);
+      if(prev&&prev.visualMesh){
+        prev.visualMesh.material.emissive=new THREE.Color(0);
+        prev.group.scale.set(1,1,1);
+      }
+      selMesh=null;
+    }
+    tooltip.style.display='none';
+  }
+});
+
+// ── HERO SECTION SEPARATION (embedded site hero only) ────────────────────────────
+// Hover a section -> it slides outward keeping its bend. Click -> the loop drops away and
+// that score unrolls flat to the front (real notes + clefs + photos) with its robot video.
+function pickSec(e){
+  const r=renderer.domElement.getBoundingClientRect();
+  mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+  raycaster.setFromCamera(mouse,camera); raycaster.params.Line.threshold=0.5;
+  const hits=raycaster.intersectObject(root,true);
+  for(const h of hits){ let o=h.object; while(o){ if(o.userData&&o.userData.sec!=null) return o.userData.sec; o=o.parent; } }
+  return -1;
+}
+function destroyFlatOverlay(){
+  if(!flatOverlay) return;
+  flatOverlay.traverse(o=>{ if(o.geometry)o.geometry.dispose(); if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(m=>{if(m.map)m.map.dispose(); m.dispose();});} });
+  scene.remove(flatOverlay); flatOverlay=null;
+  if(heroVidEl){ heroVidEl.pause(); if(heroVidEl.parentNode) heroVidEl.parentNode.removeChild(heroVidEl); heroVidEl=null; }
+}
+function buildFlatOverlay(i){
+  destroyFlatOverlay();
+  const key=curScore.scores[i];
+  flatOverlay=new THREE.Group(); flatOverlay.userData.t=0; scene.add(flatOverlay);
+  // flat score (real notes + clefs, no rollout photos) rendered into a sub-group, up top
+  const sg=new THREE.Group(); flatOverlay.add(sg);
+  const _rb=ribbonOn,_vs=VS,_sx=SCORE_XOFF,_fb=flatNoBend,_sG=staffG,_nG=noteG,_aG=annoG;
+  ribbonOn=false; SCORE_XOFF=0; flatNoBend=true; newCanvasGroups(sg);       // truly flat (no depth-bend)
+  renderStaff(SCORES[key], false, true);                                    // clefs on, photos off
+  ribbonOn=_rb; VS=_vs; SCORE_XOFF=_sx; flatNoBend=_fb; staffG=_sG; noteG=_nG; annoG=_aG;
+  sg.position.set(0, -2.2, 0);                                              // staff in the lower area (video sits above)
+  // collect this overlay's own (freshly-created, non-shared) materials so updateSeparation can fade them in
+  flatOverlay.userData.mats=[];
+  sg.traverse(o=>{ if(o.material){ const a=Array.isArray(o.material)?o.material:[o.material]; a.forEach(m=>{ m.transparent=true; m.opacity=0; flatOverlay.userData.mats.push(m); }); } });
+  // real-robot video as an HTML element with native controls (play/pause/scrub), ABOVE the score
+  const vfile=HERO_VIDEO[key];
+  if(vfile && _urlP.get('novid')!=='1'){
+    heroVidEl=document.createElement('video');
+    heroVidEl.src='videos/'+vfile;
+    heroVidEl.controls=true; heroVidEl.loop=true; heroVidEl.muted=true; heroVidEl.autoplay=true; heroVidEl.playsInline=true;
+    heroVidEl.style.cssText='position:fixed;top:6%;left:50%;transform:translateX(-50%);width:min(44vw,560px);max-height:46vh;z-index:50;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.18);background:#000;';
+    document.body.appendChild(heroVidEl);
+    const pp=heroVidEl.play(); if(pp)pp.catch(()=>{});
+  }
+}
+function selectSec(k){ secSel=k; secHover=-1; if(k>=0) buildFlatOverlay(k); else destroyFlatOverlay(); }
+function updateSeparation(){
+  for(let i=0;i<sectionGroups.length;i++){
+    const g=sectionGroups[i]; if(!g) continue;
+    const tgt=(i===secHover||i===secSel)?1:0;
+    secPull[i]+=(tgt-secPull[i])*0.09;                                       // gentle pull-out / settle
+    const r=sectionRadial[i], s=SEC_PULL*secPull[i];
+    g.position.set(r.x*s, r.y*s, r.z*s);
+  }
+  root.visible = !(secSel>=0);                                               // staff is morphed in place during the intro (notes/photos hidden separately)
+  if(flatOverlay){
+    flatOverlay.userData.t=Math.min(1, flatOverlay.userData.t+0.035);        // slower flatten
+    const e=flatOverlay.userData.t, ease=e*e*(3-2*e);                        // smoothstep: ease in + out
+    const camDir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+    flatOverlay.position.copy(camera.position).addScaledVector(camDir,12);   // billboard close, front-centre
+    flatOverlay.quaternion.copy(camera.quaternion);
+    flatOverlay.scale.setScalar(0.62*(0.9+0.1*ease));                        // subtle settle, no pop
+    const mats=flatOverlay.userData.mats; if(mats) for(const m of mats) m.opacity=ease;   // fade in
+  }
+}
+if(HERO){
+  // Section interaction is locked until the SPARK intro finishes -- hovering/clicking mid-morph
+  // would pull a section out and break the reveal.
+  renderer.domElement.addEventListener('pointermove',e=>{ if(introActive){ secHover=-1; return; } if(secSel<0){ secHover=pickSec(e); renderer.domElement.style.cursor=secHover>=0?'pointer':'grab'; } });
+  renderer.domElement.addEventListener('click',e=>{ if(introActive) return; const k=pickSec(e); if(k>=0) selectSec(secSel===k?-1:k); else if(secSel>=0) selectSec(-1); });
+  window.addEventListener('message',ev=>{ const d=ev.data; if(!d||d.type!=='hero')return;
+    if(introActive) return;
+    if(d.action==='hover'){ if(secSel<0) secHover=d.sec; }
+    else if(d.action==='leave'){ if(secSel<0) secHover=-1; }
+    else if(d.action==='select'){ selectSec(secSel===d.sec?-1:d.sec); } });
+}
+
+// ── SPARK INTRO (medley hero): a 5-line staff ribbon spells S P A R K, then reflows
+// into the loop. One continuous ribbon per staff line; we lerp its points from the
+// letter layout to the loop layout and rebuild the tube each frame. ────────────────
+const _tubeGeoStaff = pts => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length-1, LR, 8, false);  // matches drawStaff exactly
+function _resample(poly, n){
+  const segLen=[]; let total=0;
+  for(let i=1;i<poly.length;i++){ const d=Math.hypot(poly[i][0]-poly[i-1][0], poly[i][1]-poly[i-1][1]); segLen.push(d); total+=d; }
+  const out=[];
+  for(let k=0;k<n;k++){
+    const target=total*k/(n-1); let i=0, acc=0;
+    while(i<segLen.length && acc+segLen[i]<target){ acc+=segLen[i]; i++; }
+    const st=segLen[i]?(target-acc)/segLen[i]:0;
+    const a=poly[Math.min(i,poly.length-1)], b=poly[Math.min(i+1,poly.length-1)];
+    out.push([a[0]+(b[0]-a[0])*st, a[1]+(b[1]-a[1])*st]);
+  }
+  return out;
+}
+function _sparkLetterDefs(){
+  return [
+    {pts:[[1,.85],[.55,1],[.1,.85],[.1,.6],[.55,.5],[1,.4],[1,.15],[.55,0],[.1,.15]]},
+    {pts:[[0,0],[0,1],[.78,1],[.95,.78],[.78,.55],[0,.55]]},
+    {pts:[[0,0],[.5,1],[1,0],[.8,.4],[.2,.4]]},
+    {pts:[[0,0],[0,1],[.78,1],[.95,.78],[.78,.55],[0,.55],[.88,0]]},
+    {pts:[[0,1],[0,0],[0,.52],[.85,1],[.06,.52],[.85,0]]},
+  ];
+}
+// Hold SPARK (drawn with the loop's OWN staff lines), then fold the letters into the loop.
+// We morph the REAL loop staff meshes -- so when it finishes the staff already IS the loop
+// exactly (no cross-fade, no swap). Every staff line across all medley sections is spread
+// evenly over the 5 letters so they all carry the same weight, then each reflows into the ring.
+function buildIntro(){
+  introActive=true; introT=0; introMorph=[]; introNotes=[]; introHidden=[];
+  // hide everything except the staff lines; we morph the staff and reveal the rest at the end
+  root.traverse(o=>{ if((o.isMesh||o.isSprite) && !(o.userData&&o.userData.isStaff) && o.visible){ o.visible=false; introHidden.push(o); } });
+  const secMeshes=sectionGroups.map(p=>{ const a=[]; if(p) p.traverse(o=>{ if(o.userData&&o.userData.isStaff) a.push(o); }); return a; });
+  const defs=_sparkLetterDefs(), NL=5, NPP=141, GAPHALF=0.10, SCALE=2.3, SPACING=1.25, cols=[0x2563eb,0x059669,0xd97706,0xdc2626];
+  // Spread every staff line of every section evenly across the 5 letters so each letter has the
+  // same visual weight (regardless of how many lines a section owns). Each line still morphs to its
+  // OWN loop position, so the end state is the exact loop -- the SPARK just reflows into the ring.
+  const allStaff=[]; secMeshes.forEach(a=>a.forEach(m=>allStaff.push(m)));
+  const per=Math.max(1,Math.ceil(allStaff.length/NL));
+  const letterMeshes=[]; for(let k=0;k<NL;k++) letterMeshes.push(allStaff.slice(k*per,(k+1)*per));
+  const rightV=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+  const upV=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+  const ctr=ctrl.target.clone();
+  for(let k=0;k<NL;k++){
+    const meshes=letterMeshes[k]; if(!meshes.length) continue;
+    const d=defs[k];
+    let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9; d.pts.forEach(p=>{mnx=Math.min(mnx,p[0]);mxx=Math.max(mxx,p[0]);mny=Math.min(mny,p[1]);mxy=Math.max(mxy,p[1]);});
+    const ccx=(mnx+mxx)/2, ccy=(mny+mxy)/2, lx0=(k-(NL-1)/2)*SPACING, samp=_resample(d.pts, NPP), nL=meshes.length;
+    let midSpark=null, midLoop=null;
+    meshes.forEach((mesh,l)=>{
+      const off=((l%5)-2)/2, sPts=[];   // 5 canonical ribbon offsets; extra lines stack on them so letters stay airy at any section count
+      for(let j=0;j<NPP;j++){
+        const a=samp[Math.max(0,j-1)], b=samp[Math.min(NPP-1,j+1)];
+        let tx=b[0]-a[0], ty=b[1]-a[1]; const tl=Math.hypot(tx,ty)||1; tx/=tl; ty/=tl;
+        const px=(samp[j][0]-ccx)+lx0 + (-ty)*off*GAPHALF, py=(samp[j][1]-ccy) + (tx)*off*GAPHALF;
+        sPts.push(ctr.clone().addScaledVector(rightV, px*SCALE).addScaledVector(upV, py*SCALE));
+      }
+      introMorph.push({mesh, k, sparkPts:sPts, loopPts:mesh.userData.lp});
+      mesh.geometry.dispose(); mesh.geometry=_tubeGeoStaff(sPts);   // start in the SPARK shape
+      if(l===Math.floor(nL/2)){ midSpark=sPts; midLoop=mesh.userData.lp; }
+    });
+    [0.32,0.66].forEach((frac,ni)=>{   // two title notes riding on the letter's middle stroke
+      const j=Math.floor(frac*(NPP-1));
+      const ng=new THREE.Group();
+      const hg=new THREE.SphereGeometry(1,16,12); hg.scale(0.095,0.072,0.04);
+      const head=new THREE.Mesh(hg, new THREE.MeshStandardMaterial({color:cols[(k+ni)%4],metalness:0.05,roughness:0.65})); head.rotation.z=-0.28; ng.add(head);
+      const st=new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.26,5), new THREE.MeshBasicMaterial({color:0x111111})); st.position.set(0.07,0.14,0); ng.add(st);
+      scene.add(ng);
+      introNotes.push({g:ng, k, sparkPos:midSpark[j].clone(), loopPos:midLoop[j].clone()});
+    });
+  }
+  const ip=_urlP.get('introphase'); if(ip!=null) introT=parseFloat(ip);   // freeze for capture
+}
+function updateIntro(){
+  if(!introActive) return;
+  const frozen=_urlP.get('introphase')!=null;
+  if(!frozen) introT=Math.min(1, introT + 1/(INTRO_DUR*60));
+  const axis=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  const lm=[], lq=[], lcen=[], cAcc=[], cCnt=[];   // per-letter morph param, twirl quat, centroid
+  for(let k=0;k<5;k++){ const start=0.18+k*0.085, span=0.36; let m=(introT-start)/span; m=Math.max(0,Math.min(1,m));
+    lm[k]=m*m*(3-2*m); lq[k]=new THREE.Quaternion().setFromAxisAngle(axis, Math.sin(Math.PI*m)*0.7); cAcc[k]=new THREE.Vector3(); cCnt[k]=0; }
+  introMorph.forEach(it=>{ it._cur=it.sparkPts.map((s,j)=>s.clone().lerp(it.loopPts[j], lm[it.k])); it._cur.forEach(p=>{cAcc[it.k].add(p); cCnt[it.k]++;}); });
+  for(let k=0;k<5;k++){ if(cCnt[k]) lcen[k]=cAcc[k].multiplyScalar(1/cCnt[k]); }
+  introMorph.forEach(it=>{ const cen=lcen[it.k], q=lq[it.k];
+    const pts=cen ? it._cur.map(p=>p.sub(cen).applyQuaternion(q).add(cen)) : it._cur;
+    it.mesh.geometry.dispose(); it.mesh.geometry=_tubeGeoStaff(pts); it._cur=null; });
+  const noteFade = introT>0.84 ? Math.max(0,(1-introT)/0.16) : 1;
+  for(const nt of introNotes){ const np=nt.sparkPos.clone().lerp(nt.loopPos, lm[nt.k]); if(lcen[nt.k]) np.sub(lcen[nt.k]).applyQuaternion(lq[nt.k]).add(lcen[nt.k]);
+    nt.g.position.copy(np); nt.g.quaternion.copy(camera.quaternion); nt.g.scale.setScalar(noteFade); }
+  if(introT>0.9){   // fade the notes/photos in over the staff (which is already the loop) -- no pop
+    const a=Math.min(1,(introT-0.9)/0.1);
+    introHidden.forEach(o=>{ o.visible=true; if(o.material){ const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(m=>{ m.transparent=true; m.opacity=a; }); } });
+  }
+  if(!frozen && introT>=1){
+    introMorph.forEach(it=>{ it.mesh.geometry.dispose(); it.mesh.geometry=_tubeGeoStaff(it.loopPts); });  // snap to exact loop
+    introHidden.forEach(o=>{ o.visible=true; if(o.material){ const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(m=>{ m.opacity=1; }); } });
+    introNotes.forEach(nt=>scene.remove(nt.g));
+    introMorph=[]; introNotes=[]; introHidden=[]; introActive=false;
+  }
+}
+
+document.getElementById('score-select').addEventListener('change',function(){load(this.value)});
+
+// ANIMATE
+function onResize(){
+  const w=container.clientWidth,h=container.clientHeight;
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+}
+window.addEventListener('resize',onResize);
+
+let t=0;
+function animate(){
+  requestAnimationFrame(animate);
+  t+=0.003;ctrl.update();
+  // Slowly turn the medley loop so the segments travel past the camera (live only;
+  // PNG exports stay on the fixed opening/overview view).
+  if(curScore&&curScore.medley&&!EXPORT_MODE && !introActive && !(HERO&&(secHover>=0||secSel>=0))){
+    root.rotation.y += 0.0035*ribSpin;     // pause spin during the intro (so the loop stays aligned with the folded letters) and while a section is open
+  }
+  if(HERO&&curScore&&curScore.medley){ updateIntro(); updateSeparation(); }
+  if(selMesh){
+    const info=meshMap.get(selMesh);
+    if(info)info.group.scale.setScalar(1.15+Math.sin(t*8)*0.03);
+  }
+  updateReadout();
+  renderer.render(scene,camera);
+}
+
+// Live camera readout: pitch/yaw (orbit angles) + camera and target positions.
+const _readoutEl=document.getElementById('readout');
+const _sph=new THREE.Spherical(), _off=new THREE.Vector3();
+function updateReadout(){
+  if(!_readoutEl) return;
+  _off.subVectors(camera.position, ctrl.target);
+  _sph.setFromVector3(_off);
+  const yaw=THREE.MathUtils.radToDeg(_sph.theta);
+  const pitch=THREE.MathUtils.radToDeg(Math.PI/2 - _sph.phi);   // elevation above horizontal
+  const f=(n)=>n.toFixed(1).padStart(7);
+  const c=camera.position, tg=ctrl.target;
+  _readoutEl.textContent =
+    `pitch ${f(pitch)}°   yaw ${f(yaw)}°\n`+
+    `cam   x${f(c.x)} y${f(c.y)} z${f(c.z)}\n`+
+    `tgt   x${f(tg.x)} y${f(tg.y)} z${f(tg.z)}\n`+
+    `dist  ${f(_sph.radius)}   (x=red y=green z=blue)`;
+}
+
+// FIT CAMERA TO CONTENT (export)
+// Frames the staff/notes/photos to FILL the canvas, keeping the current view
+// direction. Fits both width and height (anisotropic box fit), so single-line
+// and stacked multi-row scores both fill without big margins.
+function fitExport(fill){
+  fill = fill || 0.92;
+  const box = new THREE.Box3();
+  [staffG, noteG, annoG].forEach(g => { if (g.children.length) box.expandByObject(g); });
+  if (box.isEmpty()) return;
+  // extra top room: the tilted camera throws high photos toward the top edge, so pad the
+  // box upward a little to guarantee the top row's photos never clip.
+  box.max.y += (box.max.y - box.min.y) * 0.18;
+  const c = box.getCenter(new THREE.Vector3());
+  const s = box.getSize(new THREE.Vector3());
+  const vFov = camera.fov * Math.PI / 180;
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+  const dW = (s.x / 2) / Math.tan(hFov / 2);
+  const dH = (s.y / 2) / Math.tan(vFov / 2);
+  const dist = Math.max(dW, dH) / fill + s.z / 2;
+  const dir = new THREE.Vector3().subVectors(camera.position, ctrl.target).normalize();
+  camera.position.copy(c).addScaledVector(dir, dist);
+  ctrl.target.copy(c);
+  camera.lookAt(c);
+  camera.updateProjectionMatrix();
+}
+
+// PNG EXPORT
+window.exportPNG = function(width, height) {
+  width = width || 1920;
+  height = height || 1080;
+  const prevW = renderer.domElement.width;
+  const prevH = renderer.domElement.height;
+  const prevAspect = camera.aspect;
+  renderer.setSize(width, height);
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  const dataURL = renderer.domElement.toDataURL('image/png');
+  // restore
+  renderer.setSize(prevW, prevH);
+  camera.aspect = prevAspect;
+  camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  return dataURL;
+};
+
+function downloadPNG(width, height) {
+  const scoreKey = document.getElementById('score-select').value;
+  const dataURL = window.exportPNG(width, height);
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = 'score_' + scoreKey + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// Keyboard shortcut: P to download PNG
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'p' || e.key === 'P') {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    downloadPNG();
+  }
+});
+
+// CONTROL PANEL (live medley tuning)
+// Each slider edits a tunable, then rebuilds the medley (throttled to one rebuild per
+// frame, camera + spin preserved) so geometry that is baked through cPos updates live.
+let _rebuildQueued=false;
+function scheduleMedleyRebuild(){
+  if(!(curScore&&curScore.medley)) return;
+  if(_rebuildQueued) return;
+  _rebuildQueued=true;
+  requestAnimationFrame(()=>{
+    _rebuildQueued=false;
+    const camP=camera.position.clone(), tgt=ctrl.target.clone();   // root.rotation is kept by load()
+    load('medley');
+    camera.position.copy(camP); ctrl.target.copy(tgt); ctrl.update();
+  });
+}
+function addSlider(parent,label,min,max,step,get,set){
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:6px;margin:2px 0';
+  const lab=document.createElement('span');
+  lab.textContent=label; lab.style.cssText='width:78px;text-align:right;color:#555;flex:none';
+  const inp=document.createElement('input');
+  inp.type='range'; inp.min=min; inp.max=max; inp.step=step; inp.value=get();
+  const val=document.createElement('span');
+  val.style.cssText='width:34px;color:#888;flex:none'; val.textContent=(+get()).toFixed(2);
+  inp.addEventListener('input',()=>{ set(parseFloat(inp.value)); val.textContent=(+inp.value).toFixed(2); scheduleMedleyRebuild(); });
+  row.append(lab,inp,val); parent.appendChild(row);
+}
+function buildControlPanel(){
+  const panel=document.getElementById('panel'); if(!panel) return;
+  panel.innerHTML='';
+  const head=(t)=>{ const d=document.createElement('div'); d.textContent=t;
+    d.style.cssText='font-weight:600;margin:7px 0 2px;color:#222'; panel.appendChild(d); };
+  head('Loop');
+  addSlider(panel,'height',0,4,0.1,()=>ribHWOB,v=>ribHWOB=v);
+  addSlider(panel,'waves',1,4,1,()=>ribKW,v=>ribKW=Math.round(v));
+  addSlider(panel,'radius',6,26,0.5,()=>ribR,v=>ribR=v);
+  addSlider(panel,'spin',0,2,0.05,()=>ribSpin,v=>ribSpin=v);
+  head('Bend  (depth, along B / lift, along U)');
+  addSlider(panel,'bend cyc',0,3,1,()=>RIB_PERIODS,v=>RIB_PERIODS=Math.round(v));
+  addSlider(panel,'bend amt',0,4,0.1,()=>ribAMP,v=>ribAMP=v);
+  addSlider(panel,'lift cyc',0,3,1,()=>RIB_LIFT_PERIODS,v=>RIB_LIFT_PERIODS=Math.round(v));
+  addSlider(panel,'lift amt',0,4,0.1,()=>ribLIFT,v=>ribLIFT=v);
+  const names=(SCORES.medley.scores||[]).map(k=>((SCORES[k]&&SCORES[k].name)||k).replace(/^Bimanual /,''));
+  head('Twist per section');
+  names.forEach((nm,i)=>addSlider(panel,nm,-1.5,1.5,0.05,()=>secTwist[i]||0,v=>secTwist[i]=v));
+  head('Bend (depth) per section');
+  names.forEach((nm,i)=>addSlider(panel,nm,0,2,0.05,()=>(secBend[i]==null?1:secBend[i]),v=>secBend[i]=v));
+  head('Lift (up/down) per section');
+  names.forEach((nm,i)=>addSlider(panel,nm,0,2,0.05,()=>(secLift[i]==null?1:secLift[i]),v=>secLift[i]=v));
+}
+
+try{
+  onResize();
+  // URL param: ?score=X selects initial score
+  const _params = new URLSearchParams(window.location.search);
+  const _scoreParam = _params.get('score');
+  const _initScore = (_scoreParam && SCORES[_scoreParam]) ? _scoreParam : 'mug_pour';
+  if (_initScore !== 'mug_pour') {
+    document.getElementById('score-select').value = _initScore;
+  }
+  buildControlPanel();
+  load(_initScore);
+  animate();
+  // ui=0 -> hide all chrome + the orientation axes (used when embedded as the site hero)
+  if (_params.get('ui') === '0') {
+    ['score-select', 'panel', 'readout', 'tooltip'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
+    axes.visible = false;
+  }
+  // ?sel=N -> open section N (deep-link / preview of the flattened state)
+  if (HERO && _params.get('sel') != null && curScore && curScore.medley) {
+    const _s = parseInt(_params.get('sel')); setTimeout(() => selectSec(_s), 500);
+  }
+  console.log('SPARK Score Visualizer loaded OK');
+
+  // URL parameter export: ?export=png&score=mug_pour&width=1920&height=1080
+  if (_params.get('export') === 'png') {
+    document.documentElement.classList.add('export-mode');
+    const _w = parseInt(_params.get('width')) || 1920;
+    const _h = parseInt(_params.get('height')) || 1080;
+    const _zoom = parseFloat(_params.get('zoom')) || 1;
+    if (_zoom !== 1) { camera.zoom = _zoom; camera.updateProjectionMatrix(); }
+    camera.aspect = _w / _h; camera.updateProjectionMatrix();
+    const _fill = parseFloat(_params.get('fill')) || 0.92;
+    const _rows = Math.max(1, parseInt(_params.get('rows')) || 1);
+    document.getElementById('score-select').style.display = 'none';
+    document.getElementById('tooltip').style.display = 'none';
+    // Wait for photo textures to load; for MULTI-row scores fit the camera AFTER load so
+    // the photo planes are inside the content bounds and never clipped. Single line keeps
+    // the fixed camera, which already fills the wide frame at full resolution.
+    Promise.all(_photoLoadPromises).then(function(){
+      requestAnimationFrame(function(){
+        setTimeout(function(){ downloadPNG(_w, _h); }, 500);
+      });
+    });
+  }
+}catch(e){
+  document.body.innerHTML=`<pre style="padding:20px;color:red">Init error: ${e.message}\n${e.stack}</pre>`;
+}
+
+</script>
+</body>
+</html>

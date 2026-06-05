@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPARK: Sequential Planning via Anchored Robotic Keypoints</title>
+<meta name="description" content="SPARK is a training-free manipulation system that spends its test-time compute on perception, reaching 43.7% on LIBERO-Pro and 68% across three real robots.">
+<link rel="icon" type="image/png" href="static/media/favicon.png">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+<link rel="stylesheet" href="static/css/bulma.min.css">
+<link rel="stylesheet" href="static/css/spark.css">
+
+<script type="importmap">
+{ "imports": { "three": "./static/js/three.module.js" } }
+</script>
+</head>
+<body>
+
+<!-- title, authors, links -->
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">SPARK</h1>
+          <p class="subtitle is-3 spark-expand">Sequential Planning via Anchored Robotic Keypoints</p>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><a href="https://bryceag11.github.io/" target="_blank" rel="noopener">Bryce Grant</a><sup>1</sup>,</span>
+            <span class="author-block"><a href="https://www.linkedin.com/in/aryeh-rothenberg/" target="_blank" rel="noopener">Aryeh Rothenberg</a><sup>2</sup>,</span>
+            <span class="author-block"><a href="https://www.linkedin.com/in/logan-senning/" target="_blank" rel="noopener">Logan Senning</a><sup>2</sup>,</span>
+            <span class="author-block"><a href="https://scholar.google.com/citations?user=ot7kO10AAAAJ&amp;hl=en" target="_blank" rel="noopener">Zonghe Chua</a><sup>1</sup>,</span>
+            <span class="author-block"><a href="https://scholar.google.com/citations?hl=en&amp;user=wDqCShMAAAAJ&amp;view_op=list_works&amp;sortby=pubdate" target="_blank" rel="noopener">Zach Patterson</a><sup>2</sup>,</span>
+            <span class="author-block"><a href="https://scholar.google.com/citations?hl=en&amp;user=4CbVWDcAAAAJ" target="_blank" rel="noopener">Peng Wang</a><sup>2</sup></span>
+          </div>
+          <div class="is-size-6 publication-authors">
+            <span class="author-block"><sup>1</sup>Electrical, Computer &amp; Systems Engineering,</span>
+            <span class="author-block"><sup>2</sup>Mechanical &amp; Aerospace Engineering</span><br>
+            <span class="author-block">Case Western Reserve University</span>
+          </div>
+
+          <div class="publication-links">
+            <a class="btn-link" href="#"><i class="ai ai-arxiv"></i><span>Coming soon</span></a>
+            <a class="btn-link" href="#"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" fill-rule="evenodd"/></svg><span>Coming soon</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3D music hero: the real score-visualizer medley, embedded, with the task menu over it -->
+<section class="coil-section">
+  <iframe id="hero-frame" src="score_visualizer/index.html?score=medley&ui=0" title="SPARK medley score" loading="eager"></iframe>
+  <p class="score-legend" style="margin:.6rem auto 0;max-width:760px;font-size:.85rem;color:#666;text-align:center;">How to read the score: note position encodes the action category, duration its type, and dynamics the gripper force. Phrases play legato, waypoints blending without stops.</p>
+  <div class="score-menu">
+    <button class="menu-item" data-task="0"><img src="static/media/thumbs/sweep.jpg" alt=""><span>Sweep<em>FR3</em></span></button>
+    <button class="menu-item" data-task="1"><img src="static/media/thumbs/mug.jpg" alt=""><span>Pour<em>FR3</em></span></button>
+    <button class="menu-item" data-task="2"><img src="static/media/thumbs/silverware.jpg" alt=""><span>Silverware<em>FR3</em></span></button>
+    <button class="menu-item" data-task="3"><img src="static/media/thumbs/fold_fr3.jpg" alt=""><span>Fold<em>FR3</em></span></button>
+    <button class="menu-item" data-task="4"><img src="static/media/thumbs/sponge.jpg" alt=""><span>Sponge<em>FR3</em></span></button>
+    <button class="menu-item" data-task="5"><img src="static/media/thumbs/plushie.jpg" alt=""><span>Plushie<em>UR10e</em></span></button>
+    <button class="menu-item" data-task="6"><img src="static/media/thumbs/util_tray_ur.jpg" alt=""><span>Utensils<em>UR10e</em></span></button>
+    <button class="menu-item" data-task="7"><img src="static/media/thumbs/fold_bi.jpg" alt=""><span>Fold<em>Bimanual</em></span></button>
+    <button class="menu-item" data-task="8"><img src="static/media/thumbs/libero_basket.jpg" alt=""><span>Basket<em>LIBERO sim</em></span></button>
+    <button class="menu-item" data-task="9"><img src="static/media/thumbs/capbench_stack.jpg" alt=""><span>Stack<em>CaP-Bench sim</em></span></button>
+  </div>
+</section>
+
+<!-- abstract -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            <span class="sc">Spark</span> (Sequential Planning via Anchored Robotic Keypoints) is a
+            training-free manipulation system that reaches <strong>43.7%</strong> on the six LIBERO-Pro
+            position-and-task cells, more than doubling every baseline. LIBERO-Pro perturbs object
+            positions and task descriptions. Vision-language-action models top simulated benchmarks but
+            collapse under these shifts, and CaP-Agent0 re-queries an LLM every turn to reach only 18.2%,
+            at an order of magnitude more frontier-model calls per trial. Both spend their test-time
+            compute refining the plan, yet the layer that fails under a position or task shift is
+            perception, so SPARK spends its compute there. A single Gemini call emits a typed behavior
+            tree over composable primitives that encapsulate the low-level control (motion, grasping,
+            depth geometry) a code-generation agent would otherwise regenerate as code each trial. In
+            simulation, one more Gemini call proposes three alternative text prompts per object and keeps
+            whichever SAM3 detects most cleanly, and a re-grounding recovery loop retries a failed
+            primitive against freshly detected objects with no new LLM call. Against a language-only
+            baseline, prompt self-consistency adds 27.7 points on spatial and 10.0 on object, and
+            re-grounding recovery adds about 5, all under the strict fairness conditions of CaP-Agent0:
+            language input only, no privileged state, no per-task tuning. The same primitive grammar runs
+            unchanged on three robot families (UR10e, Franka FR3, and a bimanual Franka), and across
+            eleven task-embodiment cells spanning nine unique tasks, at twenty trials each, SPARK averages
+            <strong>68%</strong>. Every step is a typed primitive with a checkable post-condition, so each
+            failure traces to the planner, perception, or a kinematic limit, and we release every logged
+            trial as a labeled dataset.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- approach -->
+<section class="section approach">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3 has-text-centered">Composing the score</h2>
+        <figure class="arch-fig">
+          <img src="static/media/figs/arch.png" alt="SPARK architecture: perception, plan, execute">
+          <figcaption>
+            SAM3 grounds each object to 3D keypoints, sharpened by adaptive perception self-consistency.
+            One Gemini call composes a typed behavior tree over five base primitives and the skills they
+            extend. The robot resolves each keypoint label to a pose at runtime under per-primitive
+            post-condition checks, re-grounding perception on a failed check with no new LLM call.
+          </figcaption>
+        </figure>
+        <div class="content has-text-justified is-size-5">
+          <p>
+            SAM3 grounds the scene from the platform cameras. One Gemini call writes the whole plan as a
+            typed behavior tree, the score, and the robot sight-reads it without any training. The plan is
+            symbolic, so moving an object or rewording the instruction barely changes it.
+            <em>&ldquo;Put the bowl on the plate&rdquo;</em> calls for the same score whether the bowl
+            starts on the left or the right; only the pixels that the label <em>bowl</em> binds to have
+            moved. Perception is the layer that breaks under that shift, so that is where SPARK spends
+            its compute.
+          </p>
+          <p>
+            Each spatial argument is a keypoint label that the executor resolves to a 3D pose against live
+            perception at the moment the robot acts. When a primitive&rsquo;s post-condition fails, SPARK
+            retracts, re-renders, re-runs SAM3, and retries the same plan with no new LLM call. The plan
+            structure stays fixed while the spatial bindings are corrected. In simulation, a single extra
+            call proposes three text prompts per object and keeps the cleanest SAM3 detection, which raises
+            the spatial mean by 27.7 points and the object mean by 10.0. Five base primitives compose into
+            multi-step behaviors with no task-specific code, and the full grammar of thirty typed skills
+            adds the force calibration and retry logic a position-only set cannot express. Because
+            execution flows through that grammar, every trial logs a labeled episode: trajectories for the
+            policies that fail under these shifts, collected with no teleoperation.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- results -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3 has-text-centered">Results</h2>
+        <p class="has-text-centered content">
+          LIBERO-Pro success rates (%) on the six position-and-task cells under matched fairness
+          conditions: task language only, no privileged state, no per-task tuning.
+        </p>
+        <figure class="result-fig">
+          <img src="static/media/figs/libero_persuite.png" alt="Per-suite LIBERO-Pro success rates by method">
+          <figcaption>
+            Per-suite breakdown. <em>Fair</em> receives task language only, matching CaP-Agent0;
+            <em>Adaptive</em> adds the three-prompt SAM3 self-consistency (the full system).
+            OpenVLA and &pi;<sub>0</sub> score 0 in every cell and are omitted; the +BDDL-names
+            ablation tracks Fair (31.2 vs 31.9 mean).
+          </figcaption>
+        </figure>
+
+        <figure class="result-fig result-fig--heat">
+          <img src="static/media/figs/libero_heatmap_spatial.png" alt="Per-task LIBERO-Pro success, spatial suite">
+          <img src="static/media/figs/libero_heatmap_object.png" alt="Per-task LIBERO-Pro success, object suite">
+          <img src="static/media/figs/libero_heatmap_goal.png" alt="Per-task LIBERO-Pro success, goal suite">
+          <figcaption>
+            Per-task success (%) for each LIBERO-Pro suite. SPARK (top two rows) holds up under
+            task perturbation, while MolmoAct2 (bottom two rows) collapses to near zero.
+          </figcaption>
+        </figure>
+
+        <h3 class="title is-5 has-text-centered" style="margin-top:2.6rem;">CaP-Bench (Robosuite)</h3>
+        <p class="has-text-centered content is-size-6 has-text-grey">
+          Per-task success (%, 100 trials per task) against CaP-Agent0 under the same protocol.
+          CaP-Agent0 values are the reported approximations from Fu et al.
+        </p>
+        <figure class="result-fig">
+          <img src="static/media/figs/capbench.png" alt="CaP-Bench per-task success, CaP-Agent0 vs SPARK">
+        </figure>
+        <p class="has-text-centered content is-size-6 has-text-grey">
+          On hardware the same pipeline averages <strong>68%</strong> across eleven task-embodiment cells
+          (nine unique tasks, twenty trials each) over three robot families, with no retraining.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- real-robot rollouts -->
+<section class="section" id="video">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Real-robot rollouts</h2>
+    <p class="has-text-centered content">
+      The UR10e, the Franka FR3, the bimanual Franka, and the simulated benchmarks running the same
+      pipeline. Objects and placements are randomized per trial.
+    </p>
+    <p class="has-text-centered content is-size-7 has-text-grey">Click a rollout to open its score.</p>
+    <div class="columns is-multiline is-centered">
+      <div class="column is-one-third"><div class="vcard" data-score="mug_pour"><video src="static/media/real/mug.mp4" autoplay muted loop playsinline></video><p>Mug pour<span class="emb">Franka FR3</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="sponge_soap"><video src="static/media/real/sponge.mp4" autoplay muted loop playsinline></video><p>Sponge wash<span class="emb">Franka FR3</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="sweep_cubes"><video src="static/media/real/sweep.mp4" autoplay muted loop playsinline></video><p>Sweep to dustpan<span class="emb">Franka FR3</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="fold"><video src="static/media/real/fold_fr3.mp4" autoplay muted loop playsinline></video><p>T-shirt fold<span class="emb">Franka FR3</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="silverware"><video src="static/media/real/silverware.mp4" autoplay muted loop playsinline></video><p>Silverware sort<span class="emb">Franka FR3</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_green.mp4" autoplay muted loop playsinline></video><p>T-shirt fold<span class="emb">Bimanual Franka</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="ur10e_plushie"><video src="score_visualizer/videos/ur10e_plushie.mp4" autoplay muted loop playsinline></video><p>Plushie in bowl<span class="emb">UR10e</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="ur10e_utensils"><video src="score_visualizer/videos/ur10e_utensils.mp4" autoplay muted loop playsinline></video><p>Utensils in tray<span class="emb">UR10e</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score=""><video src="score_visualizer/videos/sweep_cheat.mp4" autoplay muted loop playsinline></video><p>Ockham's Razor?<span class="emb">Franka FR3</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="sponge_soap"><video src="score_visualizer/videos/sponge3.mp4" autoplay muted loop playsinline></video><p>Sponge wash<span class="emb">Franka FR3, repeat trial</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="mug_pour"><video src="score_visualizer/videos/mug_pour2_bird.mp4" autoplay muted loop playsinline></video><p>Mug pour<span class="emb">Franka FR3, bird's-eye camera</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_fail_blue.mp4" autoplay muted loop playsinline></video><p>T-shirt fold failure case<span class="emb">Bimanual Franka, partial fold on blue shirt</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_fail_pinch.mp4" autoplay muted loop playsinline></video><p>T-shirt fold failure case<span class="emb">Bimanual Franka, missed hem pinch</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_lift"><video src="score_visualizer/videos/capbench_lift.mp4" autoplay muted loop playsinline></video><p>Lift<span class="emb">CaP-Bench sim, 100% at 100 trials</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_wipe"><video src="score_visualizer/videos/capbench_wipe.mp4" autoplay muted loop playsinline></video><p>Wipe<span class="emb">CaP-Bench sim</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score=""><video src="score_visualizer/videos/capbench_nut_fail.mp4" autoplay muted loop playsinline></video><p>Nut assembly failure case<span class="emb">CaP-Bench sim, shared kinematic ceiling</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="libero_bowl_stove"><video src="score_visualizer/videos/libero_bowl_stove.mp4" autoplay muted loop playsinline></video><p>Bowl on stove<span class="emb">LIBERO sim, goal suite</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score=""><video src="score_visualizer/videos/libero_moka.mp4" autoplay muted loop playsinline></video><p>Both moka pots failure case<span class="emb">LIBERO sim, SAM3 finds only 1 of 2 identical pots</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score=""><video src="score_visualizer/videos/libero_pro_pos_pudding.mp4" autoplay muted loop playsinline></video><p>Chocolate pudding to basket<span class="emb">LIBERO-Pro, position perturbation, pass</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score=""><video src="score_visualizer/videos/libero_pro_task_soup.mp4" autoplay muted loop playsinline></video><p>Alphabet soup to basket<span class="emb">LIBERO-Pro, task perturbation, pass</span></p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- citation -->
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title is-3">BibTeX</h2>
+    <pre><code>@misc{grant2026spark,
+  title  = {Sequential Planning via Anchored Robotic Keypoints},
+  author = {Grant, Bryce and Rothenberg, Aryeh and Senning, Logan
+            and Chua, Zonghe and Patterson, Zach and Wang, Peng},
+  year   = {2026}
+}</code></pre>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <p class="is-size-7">
+        Page built on the <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> template
+        (<a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>).
+      </p>
+    </div>
+  </div>
+</footer>
+
+<!-- score modal (opened by clicking a real-robot rollout) -->
+<div class="modal" id="score-modal">
+  <div class="modal-background"></div>
+  <div class="modal-content" style="width:92vw;max-width:1080px;">
+    <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25);">
+      <iframe id="score-modal-frame" title="score" style="width:100%;height:72vh;border:0;display:block;"></iframe>
+      <div id="score-modal-soon" style="display:none;align-items:center;justify-content:center;height:46vh;flex-direction:column;font-family:system-ui, -apple-system, 'Segoe UI', sans-serif;color:#777;">
+        <p style="font-size:1.2rem;color:#2a2a2a;">Score coming soon</p>
+        <p class="is-size-7">This rollout's behavior tree will be added here.</p>
+      </div>
+    </div>
+  </div>
+  <button class="modal-close is-large" aria-label="close"></button>
+</div>
+
+<script>
+// Drive the embedded medley's section separation from the task blocks.
+(function () {
+  var f = document.getElementById('hero-frame');
+  function post(action, sec) { if (f && f.contentWindow) f.contentWindow.postMessage({ type: 'hero', action: action, sec: sec }, '*'); }
+  document.querySelectorAll('.menu-item').forEach(function (el) {
+    var k = parseInt(el.dataset.task);
+    el.addEventListener('mouseenter', function () { post('hover', k); });
+    el.addEventListener('mouseleave', function () { post('leave'); });
+    el.addEventListener('click', function () { post('select', k); });
+  });
+})();
+
+// Click a real-robot rollout -> open its score in a modal (content for some is added later).
+(function () {
+  var modal = document.getElementById('score-modal');
+  var frame = document.getElementById('score-modal-frame');
+  var soon = document.getElementById('score-modal-soon');
+  if (!modal) return;
+  function open(score) {
+    if (score) {
+      frame.src = 'score_visualizer/index.html?score=' + score + '&ui=0&nointro=1';
+      frame.style.display = 'block'; soon.style.display = 'none';
+    } else {
+      frame.removeAttribute('src'); frame.style.display = 'none'; soon.style.display = 'flex';
+    }
+    modal.classList.add('is-active');
+  }
+  function close() { modal.classList.remove('is-active'); frame.removeAttribute('src'); }
+  document.querySelectorAll('#video .vcard').forEach(function (c) {
+    c.style.cursor = 'pointer';
+    c.addEventListener('click', function () { open(c.dataset.score || ''); });
+  });
+  modal.querySelector('.modal-background').addEventListener('click', close);
+  modal.querySelector('.modal-close').addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+})();
+</script>
+</body>
+</html>
