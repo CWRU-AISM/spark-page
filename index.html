@@ -134,13 +134,13 @@
             post-condition checks, re-grounding perception on a failed check with no new LLM call.
           </figcaption>
         </figure>
-        <div class="content has-text-justified is-size-5">
+        <div class="content has-text-justified">
           <p>
             SAM3 grounds the scene from the platform cameras. One Gemini call writes the whole plan as a
             typed behavior tree, the score, and the robot sight-reads it without any training. The plan is
             symbolic, so moving an object or rewording the instruction barely changes it.
-            <em>&ldquo;Put the bowl on the plate&rdquo;</em> calls for the same score whether the bowl
-            starts on the left or the right. Only the pixels that the label <em>bowl</em> binds to have
+            &ldquo;Put the bowl on the plate&rdquo; calls for the same score whether the bowl
+            starts on the left or the right. Only the pixels that the label bowl binds to have
             moved. Perception is the layer that breaks under that shift, so that is where SPARK spends
             its compute.
           </p>
@@ -235,11 +235,9 @@
       <div class="column is-one-third"><div class="vcard" data-score="capbench_handover"><video src="score_visualizer/videos/capbench_handover.mp4" autoplay muted loop playsinline></video><p>Two-arm handover<span class="emb">CaP-Bench sim, 24% at 100 trials</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_cream_cheese"><video src="score_visualizer/videos/liberopro_object_cream_cheese.mp4" autoplay muted loop playsinline></video><p>Cream cheese to basket<span class="emb">LIBERO-Pro, object suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_milk"><video src="score_visualizer/videos/liberopro_object_milk.mp4" autoplay muted loop playsinline></video><p>Milk to basket<span class="emb">LIBERO-Pro, object suite, pass</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_tomato_sauce"><video src="score_visualizer/videos/liberopro_object_tomato_sauce.mp4" autoplay muted loop playsinline></video><p>Tomato sauce to basket<span class="emb">LIBERO-Pro, object suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_spatial_next_ramekin"><video src="score_visualizer/videos/liberopro_spatial_next_ramekin.mp4" autoplay muted loop playsinline></video><p>Bowl next to ramekin onto plate<span class="emb">LIBERO-Pro, spatial suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_spatial_table_center"><video src="score_visualizer/videos/liberopro_spatial_table_center.mp4" autoplay muted loop playsinline></video><p>Bowl from table center onto plate<span class="emb">LIBERO-Pro, spatial suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_goal_cheese_bowl"><video src="score_visualizer/videos/liberopro_goal_cheese_bowl.mp4" autoplay muted loop playsinline></video><p>Cream cheese in bowl<span class="emb">LIBERO-Pro, goal suite, pass</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="liberopro_goal_wine_rack"><video src="score_visualizer/videos/liberopro_goal_wine_rack.mp4" autoplay muted loop playsinline></video><p>Wine bottle on rack<span class="emb">LIBERO-Pro, goal suite, pass</span></p></div></div>
     </div>
     <p class="has-text-centered content is-size-6 has-text-grey" style="margin-top:1.5rem">
       On hardware the same pipeline averages <strong>68%</strong> across eleven task-embodiment cells
