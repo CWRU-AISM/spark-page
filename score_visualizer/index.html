@@ -52,25 +52,24 @@ html.export-mode #panel{display:none!important}
   <option value="fold">T-shirt Fold (single-arm) — 13 notes</option>
   <option value="silverware">Utensils Sort — 10 notes</option>
   <option value="ur10e_plushie">Plushie in Bowl (UR10e) — 5 notes</option>
+  <option value="ur10e_goldstack">Gold Block Stack (UR10e) — 4 notes</option>
+  <option value="ur10e_bluestack">Stack Block (UR10e) — 4 notes</option>
   <option value="ur10e_utensils">Utensils in Tray (UR10e) — 9 notes</option>
   <option value="libero_bowl_stove">Bowl on Stove (LIBERO sim) — 5 notes</option>
   <option value="libero_basket">Soup + Cheese to Basket (LIBERO sim) — 10 notes</option>
   <option value="libero_moka">Both Moka Pots (LIBERO sim) — 10 notes</option>
   <option value="capbench_wipe">Wipe (CaP-Bench sim) — 1 note</option>
+  <option value="capbench_nut">Nut Assembly (CaP-Bench sim) — 5 notes</option>
   <option value="capbench_stack">Stack (CaP-Bench sim) — 4 notes</option>
   <option value="capbench_lift">Lift (CaP-Bench sim) — 3 notes</option>
   <option value="capbench_cuberestack">Cube Restack (CaP-Bench sim) — 4 notes</option>
   <option value="capbench_twoarmlift">Two-Arm Lift (CaP-Bench sim) — grand staff</option>
   <option value="capbench_handover">Two-Arm Handover (CaP-Bench sim) — grand staff</option>
-  <option value="liberopro_goal_bowl_plate">Goal: Bowl on Plate (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_goal_bowl_stove">Goal: Bowl on Stove (LIBERO-PRO) — 4 notes</option>
-  <option value="liberopro_goal_bowl_cabinet">Goal: Bowl on Cabinet (LIBERO-PRO) — 5 notes</option>
   <option value="liberopro_goal_cheese_bowl">Goal: Cream Cheese in Bowl (LIBERO-PRO) — 5 notes</option>
   <option value="liberopro_goal_wine_rack">Goal: Wine Bottle on Rack (LIBERO-PRO) — 5 notes</option>
   <option value="liberopro_object_cream_cheese">Object: Cream Cheese to Basket (LIBERO-PRO) — 5 notes</option>
   <option value="liberopro_object_milk">Object: Milk to Basket (LIBERO-PRO) — 5 notes</option>
   <option value="liberopro_object_tomato_sauce">Object: Tomato Sauce to Basket (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_spatial_between_ramekin">Spatial: Bowl between Plate/Ramekin (LIBERO-PRO) — 5 notes</option>
   <option value="liberopro_spatial_next_ramekin">Spatial: Bowl next to Ramekin (LIBERO-PRO) — 5 notes</option>
   <option value="liberopro_spatial_table_center">Spatial: Bowl from Table Center (LIBERO-PRO) — 5 notes</option>
   <option value="medley">Medley — 10 tasks, sim + 3 robots (loop)</option>
@@ -243,14 +242,14 @@ const SCORES = {
   },
   ur10e_plushie:{
     name:"Plushie in Bowl",
-    rollout:"corl/ur10e_plushie",
+    rollout:"ur10e_plushie",
     notePhase:["detect","grasp","lift","to bowl","end"],
     photos:[
-      {noteIdx:0, src:"rollouts/corl/ur10e_plushie/00_detect.jpg", caption:"detect"},
-      {noteIdx:1, src:"rollouts/corl/ur10e_plushie/01_grasp.jpg", caption:"grasp"},
-      {noteIdx:2, src:"rollouts/corl/ur10e_plushie/02_lift.jpg", caption:"lift"},
-      {noteIdx:3, src:"rollouts/corl/ur10e_plushie/03_at_bowl.jpg", caption:"above bowl"},
-      {noteIdx:4, src:"rollouts/corl/ur10e_plushie/04_release.jpg", caption:"release"}
+      {noteIdx:0, src:"rollouts/ur10e_plushie/00_detect.jpg", caption:"detect"},
+      {noteIdx:1, src:"rollouts/ur10e_plushie/01_grasp.jpg", caption:"grasp"},
+      {noteIdx:2, src:"rollouts/ur10e_plushie/02_moverel.jpg", caption:"lift"},
+      {noteIdx:3, src:"rollouts/ur10e_plushie/03_movekp.jpg", caption:"above bowl"},
+      {noteIdx:4, src:"rollouts/ur10e_plushie/04_release.jpg", caption:"release"}
     ],
     // BT from the live SPARKPlanner (Gemini) call on the rollout's first frame (ur10e_rollouts/gemini_bt_plushie.yaml)
     notes:[
@@ -258,6 +257,58 @@ const SCORES = {
       {type:"grasp_se3",label:"plushie",params:{force:20,target_width:0.03}},
       {type:"move_relative",label:"lift",params:{dz:0.2}},
       {type:"move_to_keypoint",label:"bowl",params:{offset_z:0.15}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  ur10e_plushie_dext:{
+    name:"Plushie in Bowl",
+    rollout:"ur10e_plushie_dext",
+    notePhase:["detect","grasp","lift","to bowl","end"],
+    photos:[
+      {noteIdx:0, src:"rollouts/ur10e_plushie_dext/00.jpg", caption:""},
+      {noteIdx:1, src:"rollouts/ur10e_plushie_dext/01.jpg", caption:""},
+      {noteIdx:2, src:"rollouts/ur10e_plushie_dext/02.jpg", caption:""},
+      {noteIdx:3, src:"rollouts/ur10e_plushie_dext/03.jpg", caption:""}
+    ],
+    notes:[
+      {type:"detect",label:"plushie, bowl",params:{}},
+      {type:"grasp_se3",label:"plushie",params:{force:20,target_width:0.03}},
+      {type:"move_relative",label:"lift",params:{dz:0.2}},
+      {type:"move_to_keypoint",label:"bowl",params:{offset_z:0.15}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  ur10e_goldstack:{
+    name:"Gold Block Stack",
+    rollout:"ur10e_goldstack",
+    notePhase:["to block","grasp","to base","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/ur10e_goldstack/00_movekp.jpg", caption:"to block"},
+      {noteIdx:1, src:"rollouts/ur10e_goldstack/01_grasp.jpg", caption:"grasp"},
+      {noteIdx:2, src:"rollouts/ur10e_goldstack/02_movekp.jpg", caption:"to base"},
+      {noteIdx:3, src:"rollouts/ur10e_goldstack/03_release.jpg", caption:"release"}
+    ],
+    notes:[
+      {type:"move_to_keypoint",label:"gold block",params:{}},
+      {type:"grasp_se3",label:"gold block",params:{}},
+      {type:"move_to_keypoint",label:"base block",params:{offset_z:0.05}},
+      {type:"release",label:"",params:{}}
+    ]
+  },
+  ur10e_bluestack:{
+    name:"Stack Block",
+    rollout:"ur10e_bluestack",
+    notePhase:["to block","grasp","to base","release"],
+    photos:[
+      {noteIdx:0, src:"rollouts/ur10e_bluestack/00_movekp.jpg", caption:"to block"},
+      {noteIdx:1, src:"rollouts/ur10e_bluestack/01_grasp.jpg", caption:"grasp"},
+      {noteIdx:2, src:"rollouts/ur10e_bluestack/02_movekp.jpg", caption:"to base"},
+      {noteIdx:3, src:"rollouts/ur10e_bluestack/03_release.jpg", caption:"release"}
+    ],
+    notes:[
+      {type:"move_to_keypoint",label:"blue block",params:{}},
+      {type:"grasp_se3",label:"blue block",params:{}},
+      {type:"move_to_keypoint",label:"base block",params:{offset_z:0.05}},
       {type:"release",label:"",params:{}}
     ]
   },
@@ -464,13 +515,30 @@ const SCORES = {
   capbench_wipe:{
     name:"Wipe (CaP-Bench)",
     rollout:"corl/capbench_wipe",
-    notePhase:["wipe"],
+    notePhase:["constrained_scrub"],
     photos:[
       {noteIdx:0, src:"rollouts/corl/capbench_wipe/01_wiping.jpg", caption:"raster wipe"}
     ],
     // Executed plan from the wipe run log (wipe_concentric_v5): one primitive, ten passes
     notes:[
-      {type:"wipe",label:"brown table smudges",params:{sweep_width:0.2,sweep_length:0.4,num_passes:10}}
+      {type:"constrained_scrub",label:"brown table smudges",params:{sweep_width:0.2,sweep_length:0.4,num_passes:10}}
+    ]
+  },
+  capbench_nut:{
+    name:"Nut Assembly (CaP-Bench)",
+    rollout:"capbench_nut",
+    notePhase:["detect","grasp","move","insert","release"],
+    photos:[
+      {noteIdx:1, src:"rollouts/capbench_nut/00_grasp.jpg", caption:"oriented grasp"},
+      {noteIdx:2, src:"rollouts/capbench_nut/01_at_peg.jpg", caption:"align over square peg"},
+      {noteIdx:3, src:"rollouts/capbench_nut/02_seated.jpg", caption:"seated on peg"}
+    ],
+    notes:[
+      {type:"detect",label:"square nut, square peg",params:{}},
+      {type:"grasp_se3",label:"nut, oriented to principal axis",params:{force:60}},
+      {type:"move_to_keypoint",label:"square peg",params:{offset_z:0.05}},
+      {type:"insert",label:"seat on square peg",params:{}},
+      {type:"release",label:"",params:{}}
     ]
   },
   capbench_lift:{
@@ -581,63 +649,6 @@ const SCORES = {
   // log truncates raw_yaml at 240 chars, so the lift dz / place offset_z / release follow
   // the standard LIBERO-PRO pick-place pattern (identical across all libero_* entries).
   // Photos are agentview_rgb keyframes pulled at the detected event frames.
-  liberopro_goal_bowl_plate:{
-    name:"Goal: Bowl on Plate (LIBERO-PRO)",
-    rollout:"liberopro_goal_bowl_plate",
-    notePhase:["approach","grasp","lift","to plate","release"],
-    photos:[
-      {noteIdx:0, src:"rollouts/liberopro_goal_bowl_plate/00_approach.jpg", caption:"approach"},
-      {noteIdx:1, src:"rollouts/liberopro_goal_bowl_plate/01_grasp.jpg", caption:"grasp"},
-      {noteIdx:2, src:"rollouts/liberopro_goal_bowl_plate/02_lift.jpg", caption:"lift"},
-      {noteIdx:3, src:"rollouts/liberopro_goal_bowl_plate/03_at_plate.jpg", caption:"above plate"},
-      {noteIdx:4, src:"rollouts/liberopro_goal_bowl_plate/04_release.jpg", caption:"release"}
-    ],
-    notes:[
-      {type:"move_to_keypoint",label:"bowl",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"plate",params:{offset_z:0.05}},
-      {type:"release",label:"",params:{}}
-    ]
-  },
-  liberopro_goal_bowl_stove:{
-    name:"Goal: Bowl on Stove (LIBERO-PRO)",
-    rollout:"liberopro_goal_bowl_stove",
-    notePhase:["grasp","lift","to stove","release"],
-    photos:[
-      {noteIdx:0, src:"rollouts/liberopro_goal_bowl_stove/00_grasp.jpg", caption:"grasp (SE3)"},
-      {noteIdx:1, src:"rollouts/liberopro_goal_bowl_stove/01_lift.jpg", caption:"lift"},
-      {noteIdx:2, src:"rollouts/liberopro_goal_bowl_stove/02_at_stove.jpg", caption:"above stove"},
-      {noteIdx:3, src:"rollouts/liberopro_goal_bowl_stove/03_release.jpg", caption:"release"}
-    ],
-    // Same task as libero_bowl_stove above, but a distinct fresh run whose plan opens
-    // with a single grasp_se3 (approach+grasp fused) instead of move_to_keypoint+grasp.
-    notes:[
-      {type:"grasp_se3",label:"bowl",params:{prefer_angled:true,force:60,target_width:0.02}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"flat stove",params:{offset_z:0.05}},
-      {type:"release",label:"",params:{}}
-    ]
-  },
-  liberopro_goal_bowl_cabinet:{
-    name:"Goal: Bowl on Top of Cabinet (LIBERO-PRO)",
-    rollout:"liberopro_goal_bowl_cabinet",
-    notePhase:["approach","grasp","lift","to cabinet","release"],
-    photos:[
-      {noteIdx:0, src:"rollouts/liberopro_goal_bowl_cabinet/00_approach.jpg", caption:"approach"},
-      {noteIdx:1, src:"rollouts/liberopro_goal_bowl_cabinet/01_grasp.jpg", caption:"grasp"},
-      {noteIdx:2, src:"rollouts/liberopro_goal_bowl_cabinet/02_lift.jpg", caption:"lift"},
-      {noteIdx:3, src:"rollouts/liberopro_goal_bowl_cabinet/03_at_cabinet.jpg", caption:"above cabinet"},
-      {noteIdx:4, src:"rollouts/liberopro_goal_bowl_cabinet/04_release.jpg", caption:"release"}
-    ],
-    notes:[
-      {type:"move_to_keypoint",label:"bowl",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:50,target_width:0.04}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"wooden cabinet",params:{offset_z:0.05}},
-      {type:"release",label:"",params:{}}
-    ]
-  },
   liberopro_goal_cheese_bowl:{
     name:"Goal: Cream Cheese in Bowl (LIBERO-PRO)",
     rollout:"liberopro_goal_cheese_bowl",
@@ -733,26 +744,6 @@ const SCORES = {
       {type:"release",label:"",params:{}}
     ]
   },
-  liberopro_spatial_between_ramekin:{
-    name:"Spatial: Bowl (between plate & ramekin) on Plate (LIBERO-PRO)",
-    rollout:"liberopro_spatial_between_ramekin",
-    notePhase:["approach","grasp","lift","to plate","release"],
-    photos:[
-      {noteIdx:0, src:"rollouts/liberopro_spatial_between_ramekin/00_approach.jpg", caption:"approach"},
-      {noteIdx:1, src:"rollouts/liberopro_spatial_between_ramekin/01_grasp.jpg", caption:"grasp"},
-      {noteIdx:2, src:"rollouts/liberopro_spatial_between_ramekin/02_lift.jpg", caption:"lift"},
-      {noteIdx:3, src:"rollouts/liberopro_spatial_between_ramekin/03_at_plate.jpg", caption:"above plate"},
-      {noteIdx:4, src:"rollouts/liberopro_spatial_between_ramekin/04_release.jpg", caption:"release"}
-    ],
-    // force/target_width past the first node were truncated in the log; standard values shown.
-    notes:[
-      {type:"move_to_keypoint",label:"akita black bowl",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"plate",params:{offset_z:0.05}},
-      {type:"release",label:"",params:{}}
-    ]
-  },
   liberopro_spatial_next_ramekin:{
     name:"Spatial: Bowl (next to ramekin) on Plate (LIBERO-PRO)",
     rollout:"liberopro_spatial_next_ramekin",
@@ -796,7 +787,7 @@ const SCORES = {
 // Medley: sweep + pour + fold (bimanual) + sponge, each its own normal staff,
 // rotated + translated into a ring (loop) in the XY plane. Pan to travel the loop.
 SCORES.medley={ name:"Medley (loop)", medley:true,
-  scores:["sweep_cubes","mug_pour","silverware","fold","sponge_soap","ur10e_plushie","ur10e_utensils","bimanual_fold","libero_basket","capbench_stack"] };
+  scores:["sweep_cubes","mug_pour","silverware","fold","sponge_soap","ur10e_plushie_dext","ur10e_utensils","bimanual_fold","capbench_wipe","capbench_nut","ur10e_bluestack"] };
 
 // MUSIC MAPPINGS
 const GRASP=new Set(['grasp_se3','grasp','pick_with_arm','grasp_arm']);
@@ -885,15 +876,14 @@ let root=new THREE.Group(); scene.add(root);
 let sectionGroups=[], sectionRadial=[], secPull=[], secHover=-1, secSel=-1, flatOverlay=null, heroVidEl=null;
 let introActive=false, introT=0, introMorph=[], introNotes=[], introHidden=[]; const INTRO_DUR=3.4;   // SPARK -> loop opening
 const HERO_VIDEO={sweep_cubes:'sweep2.mp4', mug_pour:'mug_pour2.mp4', silverware:'silverware.mp4', fold:'fold_single.mp4',
-  sponge_soap:'sponge2.mp4', ur10e_plushie:'ur10e_plushie.mp4', ur10e_utensils:'ur10e_utensils.mp4', bimanual_fold:'fold_bi_green.mp4',
+  sponge_soap:'sponge2.mp4', ur10e_plushie:'ur10e_plushie_bird.mp4', ur10e_plushie_dext:'ur10e_plushie_dext.mp4', ur10e_goldstack:'ur10e_goldstack.mp4', ur10e_bluestack:'ur10e_bluestack.mp4', ur10e_utensils:'ur10e_utensils.mp4', bimanual_fold:'fold_bi_green.mp4',
   libero_bowl_stove:'libero_bowl_stove.mp4', capbench_stack:'capbench_stack.mp4', capbench_lift:'capbench_lift.mp4',
-  libero_moka:'libero_moka.mp4', capbench_wipe:'capbench_wipe.mp4', libero_basket:'libero_basket.mp4',
+  libero_moka:'libero_moka.mp4', capbench_wipe:'capbench_wipe.mp4', capbench_nut:'capbench_nut.mp4', libero_basket:'libero_basket.mp4',
   capbench_cuberestack:'capbench_cuberestack.mp4', capbench_twoarmlift:'capbench_twoarmlift.mp4', capbench_handover:'capbench_handover.mp4',
-  liberopro_goal_bowl_plate:'liberopro_goal_bowl_plate.mp4', liberopro_goal_bowl_stove:'liberopro_goal_bowl_stove.mp4',
-  liberopro_goal_bowl_cabinet:'liberopro_goal_bowl_cabinet.mp4', liberopro_goal_cheese_bowl:'liberopro_goal_cheese_bowl.mp4',
+  liberopro_goal_cheese_bowl:'liberopro_goal_cheese_bowl.mp4',
   liberopro_goal_wine_rack:'liberopro_goal_wine_rack.mp4', liberopro_object_cream_cheese:'liberopro_object_cream_cheese.mp4',
   liberopro_object_milk:'liberopro_object_milk.mp4', liberopro_object_tomato_sauce:'liberopro_object_tomato_sauce.mp4',
-  liberopro_spatial_between_ramekin:'liberopro_spatial_between_ramekin.mp4', liberopro_spatial_next_ramekin:'liberopro_spatial_next_ramekin.mp4'};
+  liberopro_spatial_next_ramekin:'liberopro_spatial_next_ramekin.mp4'};
 const SEC_PULL=3.0;
 let staffG, noteG, annoG;   // current working groups, reassigned per score and parented under root
 let meshes=[],meshMap=new Map(),selMesh=null,curScore=null;

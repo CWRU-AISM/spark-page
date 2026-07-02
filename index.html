@@ -54,7 +54,7 @@
 
           <div class="publication-links">
             <a class="btn-link" href="http://arxiv.org/abs/2606.30613"><i class="ai ai-arxiv"></i><span>arXiv</span></a>
-            <a class="btn-link" href="#"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" fill-rule="evenodd"/></svg><span>Coming soon</span></a>
+            <a class="btn-link" href="#"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" fill-rule="evenodd"/></svg><span>Coming 7/8</span></a>
           </div>
         </div>
       </div>
@@ -75,8 +75,9 @@
     <button class="menu-item" data-task="5"><img src="static/media/thumbs/plushie.jpg" alt=""><span>Plushie<em>UR10e</em></span></button>
     <button class="menu-item" data-task="6"><img src="static/media/thumbs/util_tray_ur.jpg" alt=""><span>Utensils<em>UR10e</em></span></button>
     <button class="menu-item" data-task="7"><img src="static/media/thumbs/fold_bi.jpg" alt=""><span>Fold<em>Bimanual</em></span></button>
-    <button class="menu-item" data-task="8"><img src="static/media/thumbs/libero_basket.jpg" alt=""><span>Basket<em>LIBERO sim</em></span></button>
-    <button class="menu-item" data-task="9"><img src="static/media/thumbs/capbench_stack.jpg" alt=""><span>Stack<em>CaP-Bench sim</em></span></button>
+    <button class="menu-item" data-task="8"><img src="static/media/thumbs/capbench_wipe.jpg" alt=""><span>Wipe<em>CaP-Bench</em></span></button>
+    <button class="menu-item" data-task="9"><img src="static/media/thumbs/nut.jpg" alt=""><span>Nut<em>CaP-Bench</em></span></button>
+    <button class="menu-item" data-task="10"><img src="static/media/thumbs/bluestack.jpg" alt=""><span>Stack<em>UR10e</em></span></button>
   </div>
 </section>
 
@@ -150,9 +151,9 @@
             retracts, re-renders, re-runs SAM3, and retries the same plan with no new LLM call. The plan
             structure stays fixed while the spatial bindings are corrected. In simulation, a single extra
             call proposes three text prompts per object and keeps the cleanest SAM3 detection, which raises
-            the spatial mean by 27.7 points and the object mean by 10.0. Five base primitives compose into
-            multi-step behaviors with no task-specific code, and the full grammar of thirty typed skills
-            adds the force calibration and retry logic a position-only set cannot express. Because
+            the spatial mean by 27.7 points and the object mean by 10.0. Five base primitives compose into the
+            multi-step behaviors, and the grammar wraps those same
+            primitives in more than thirty typed skills that add the force calibration and retry logic. Because
             execution flows through that grammar, every trial logs a labeled episode: trajectories for the
             policies that fail under these shifts, collected with no teleoperation.
           </p>
@@ -219,11 +220,11 @@
       <div class="column is-one-third"><div class="vcard" data-score="fold"><video src="static/media/real/fold_fr3.mp4" autoplay muted loop playsinline></video><p>T-shirt fold<span class="emb">Franka FR3</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="silverware"><video src="score_visualizer/videos/silverware_bird.mp4" autoplay muted loop playsinline></video><p>Utensils sort<span class="emb">Franka FR3, bird's-eye camera</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_green.mp4" autoplay muted loop playsinline></video><p>T-shirt fold<span class="emb">Bimanual Franka</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="ur10e_plushie"><video src="score_visualizer/videos/ur10e_plushie.mp4" autoplay muted loop playsinline></video><p>Plushie in bowl<span class="emb">UR10e</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="ur10e_plushie"><video src="score_visualizer/videos/ur10e_plushie_bird.mp4" autoplay muted loop playsinline></video><p>Plushie in bowl<span class="emb">UR10e</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="ur10e_utensils"><video src="score_visualizer/videos/ur10e_utensils.mp4" autoplay muted loop playsinline></video><p>Utensils in tray<span class="emb">UR10e</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="ur10e_goldstack"><video src="score_visualizer/videos/ur10e_goldstack.mp4" autoplay muted loop playsinline></video><p>Gold block stack<span class="emb">UR10e</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score=""><video src="score_visualizer/videos/sweep.mp4" autoplay muted loop playsinline></video><p>Occam's Razor?<span class="emb">Franka FR3</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="sponge_soap"><video src="score_visualizer/videos/sponge3.mp4" autoplay muted loop playsinline></video><p>Sponge wash<span class="emb">Franka FR3, repeat trial</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="mug_pour"><video src="score_visualizer/videos/mug_pour2_bird.mp4" autoplay muted loop playsinline></video><p>Mug pour<span class="emb">Franka FR3, bird's-eye camera</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_fail_blue.mp4" autoplay muted loop playsinline></video><p>T-shirt fold failure case<span class="emb">Bimanual Franka, partial fold on blue shirt</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_fail_pinch.mp4" autoplay muted loop playsinline></video><p>T-shirt fold failure case<span class="emb">Bimanual Franka, missed hem pinch</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="capbench_lift"><video src="score_visualizer/videos/capbench_lift.mp4" autoplay muted loop playsinline></video><p>Lift<span class="emb">CaP-Bench sim, 100% at 100 trials</span></p></div></div>
@@ -231,17 +232,13 @@
       <div class="column is-one-third"><div class="vcard" data-score="capbench_cuberestack"><video src="score_visualizer/videos/capbench_cuberestack.mp4" autoplay muted loop playsinline></video><p>Cube restack<span class="emb">CaP-Bench sim, 100% at 100 trials</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="capbench_twoarmlift"><video src="score_visualizer/videos/capbench_twoarmlift.mp4" autoplay muted loop playsinline></video><p>Two-arm lift<span class="emb">CaP-Bench sim, 63% at 100 trials</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="capbench_wipe"><video src="score_visualizer/videos/capbench_wipe.mp4" autoplay muted loop playsinline></video><p>Wipe<span class="emb">CaP-Bench sim, 60% at 100 trials</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score=""><video src="score_visualizer/videos/capbench_nut.mp4" autoplay muted loop playsinline></video><p>Peg insert<span class="emb">CaP-Bench sim, full-pose descent beyond the OSC grammar</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_nut"><video src="score_visualizer/videos/capbench_nut.mp4" autoplay muted loop playsinline></video><p>Nut assembly<span class="emb">CaP-Bench sim, full-pose descent beyond the OSC grammar</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="capbench_handover"><video src="score_visualizer/videos/capbench_handover.mp4" autoplay muted loop playsinline></video><p>Two-arm handover<span class="emb">CaP-Bench sim, 24% at 100 trials</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_cream_cheese"><video src="score_visualizer/videos/liberopro_object_cream_cheese.mp4" autoplay muted loop playsinline></video><p>Cream cheese to basket<span class="emb">LIBERO-Pro, object suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_milk"><video src="score_visualizer/videos/liberopro_object_milk.mp4" autoplay muted loop playsinline></video><p>Milk to basket<span class="emb">LIBERO-Pro, object suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_tomato_sauce"><video src="score_visualizer/videos/liberopro_object_tomato_sauce.mp4" autoplay muted loop playsinline></video><p>Tomato sauce to basket<span class="emb">LIBERO-Pro, object suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_spatial_next_ramekin"><video src="score_visualizer/videos/liberopro_spatial_next_ramekin.mp4" autoplay muted loop playsinline></video><p>Bowl next to ramekin onto plate<span class="emb">LIBERO-Pro, spatial suite, pass</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="liberopro_spatial_between_ramekin"><video src="score_visualizer/videos/liberopro_spatial_between_ramekin.mp4" autoplay muted loop playsinline></video><p>Bowl between plate and ramekin onto plate<span class="emb">LIBERO-Pro, spatial suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_spatial_table_center"><video src="score_visualizer/videos/liberopro_spatial_table_center.mp4" autoplay muted loop playsinline></video><p>Bowl from table center onto plate<span class="emb">LIBERO-Pro, spatial suite, pass</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="liberopro_goal_bowl_stove"><video src="score_visualizer/videos/liberopro_goal_bowl_stove.mp4" autoplay muted loop playsinline></video><p>Bowl on stove<span class="emb">LIBERO-Pro, goal suite, pass</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="liberopro_goal_bowl_plate"><video src="score_visualizer/videos/liberopro_goal_bowl_plate.mp4" autoplay muted loop playsinline></video><p>Bowl on plate<span class="emb">LIBERO-Pro, goal suite, pass</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="liberopro_goal_bowl_cabinet"><video src="score_visualizer/videos/liberopro_goal_bowl_cabinet.mp4" autoplay muted loop playsinline></video><p>Bowl on top of cabinet<span class="emb">LIBERO-Pro, goal suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_goal_cheese_bowl"><video src="score_visualizer/videos/liberopro_goal_cheese_bowl.mp4" autoplay muted loop playsinline></video><p>Cream cheese in bowl<span class="emb">LIBERO-Pro, goal suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_goal_wine_rack"><video src="score_visualizer/videos/liberopro_goal_wine_rack.mp4" autoplay muted loop playsinline></video><p>Wine bottle on rack<span class="emb">LIBERO-Pro, goal suite, pass</span></p></div></div>
     </div>
