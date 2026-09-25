@@ -44,35 +44,32 @@ html.export-mode #panel{display:none!important}
 "></div>
 <div id="panel"></div>
 <select id="score-select">
-  <option value="mug_pour">Mug Pour — 6 notes, legato phrase</option>
+  <option value="mug_pour">Mug Pour - 6 notes, legato phrase</option>
   <option value="mug_pour_birdview">Mug Pour (birdview)</option>
-  <option value="sponge_soap">Sponge Wash — 7 notes, legato phrase</option>
-  <option value="sweep_cubes">Sweep Cubes — 6 notes</option>
-  <option value="bimanual_fold">Bimanual T-shirt Fold — grand staff</option>
-  <option value="fold">T-shirt Fold (single-arm) — 13 notes</option>
-  <option value="silverware">Utensils Sort — 10 notes</option>
-  <option value="ur10e_plushie">Plushie in Bowl (UR10e) — 5 notes</option>
-  <option value="ur10e_goldstack">Gold Block Stack (UR10e) — 4 notes</option>
-  <option value="ur10e_bluestack">Stack Block (UR10e) — 4 notes</option>
-  <option value="ur10e_utensils">Utensils in Tray (UR10e) — 9 notes</option>
-  <option value="libero_bowl_stove">Bowl on Stove (LIBERO sim) — 5 notes</option>
-  <option value="libero_basket">Soup + Cheese to Basket (LIBERO sim) — 10 notes</option>
-  <option value="libero_moka">Both Moka Pots (LIBERO sim) — 10 notes</option>
-  <option value="capbench_wipe">Wipe (CaP-Bench sim) — 1 note</option>
-  <option value="capbench_nut">Nut Assembly (CaP-Bench sim) — 5 notes</option>
-  <option value="capbench_stack">Stack (CaP-Bench sim) — 4 notes</option>
-  <option value="capbench_lift">Lift (CaP-Bench sim) — 3 notes</option>
-  <option value="capbench_cuberestack">Cube Restack (CaP-Bench sim) — 4 notes</option>
-  <option value="capbench_twoarmlift">Two-Arm Lift (CaP-Bench sim) — grand staff</option>
-  <option value="capbench_handover">Two-Arm Handover (CaP-Bench sim) — grand staff</option>
-  <option value="liberopro_goal_cheese_bowl">Goal: Cream Cheese in Bowl (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_goal_wine_rack">Goal: Wine Bottle on Rack (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_object_cream_cheese">Object: Cream Cheese to Basket (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_object_milk">Object: Milk to Basket (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_object_tomato_sauce">Object: Tomato Sauce to Basket (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_spatial_next_ramekin">Spatial: Bowl next to Ramekin (LIBERO-PRO) — 5 notes</option>
-  <option value="liberopro_spatial_table_center">Spatial: Bowl from Table Center (LIBERO-PRO) — 5 notes</option>
-  <option value="medley">Medley — 10 tasks, sim + 3 robots (loop)</option>
+  <option value="sponge_soap">Sponge Wash - 7 notes, legato phrase</option>
+  <option value="sweep_cubes">Sweep Cubes - 6 notes</option>
+  <option value="bimanual_fold">Bimanual T-shirt Fold - grand staff</option>
+  <option value="fold">T-shirt Fold (single-arm) - 13 notes</option>
+  <option value="silverware">Utensils in Tray (FR3) - 10 notes</option>
+  <option value="ur10e_plushie">Plushie in Bowl (UR10e) - 5 notes</option>
+  <option value="ur10e_goldstack">Gold Block Stack (UR10e) - 4 notes</option>
+  <option value="ur10e_bluestack">Stack Block (UR10e) - 4 notes</option>
+  <option value="ur10e_utensils">Utensils in Tray (UR10e) - 9 notes</option>
+  <option value="capbench_wipe">Wipe (CaP-Bench sim) - 1 note</option>
+  <option value="capbench_nut">Nut Assembly (CaP-Bench sim) - 5 notes</option>
+  <option value="capbench_stack">Stack (CaP-Bench sim) - 4 notes</option>
+  <option value="capbench_lift">Lift (CaP-Bench sim) - 3 notes</option>
+  <option value="capbench_cuberestack">Cube Restack (CaP-Bench sim) - 4 notes</option>
+  <option value="capbench_twoarmlift">Two-Arm Lift (CaP-Bench sim) - grand staff</option>
+  <option value="capbench_handover">Two-Arm Handover (CaP-Bench sim) - grand staff</option>
+  <option value="liberopro_goal_cheese_bowl">Goal: Cream Cheese in Bowl (LIBERO-PRO) - 5 notes</option>
+  <option value="liberopro_goal_wine_rack">Goal: Wine Bottle on Rack (LIBERO-PRO) - 5 notes</option>
+  <option value="liberopro_object_cream_cheese">Object: Cream Cheese to Basket (LIBERO-PRO) - 5 notes</option>
+  <option value="liberopro_object_milk">Object: Milk to Basket (LIBERO-PRO) - 5 notes</option>
+  <option value="liberopro_object_tomato_sauce">Object: Tomato Sauce to Basket (LIBERO-PRO) - 5 notes</option>
+  <option value="liberopro_spatial_next_ramekin">Spatial: Bowl next to Ramekin (LIBERO-PRO) - 5 notes</option>
+  <option value="liberopro_spatial_table_center">Spatial: Bowl from Table Center (LIBERO-PRO) - 5 notes</option>
+  <option value="medley">Medley - 10 tasks, sim + 3 robots (loop)</option>
 </select>
 
 <script type="importmap">
@@ -214,7 +211,7 @@ const SCORES = {
     ]
   },
   silverware:{
-    name:"Utensils Sort",
+    name:"Utensils in Tray (FR3)",
     labelsTop:true,
     rollout:"corl/silverware",
     notePhase:["detect","grasp","lift","place","grasp","lift","place","grasp","lift","place"],
@@ -414,26 +411,6 @@ const SCORES = {
     ],
     parallel_groups:[[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13]]
   },
-  libero_bowl_stove:{
-    name:"Bowl on Stove (LIBERO)",
-    rollout:"corl/libero_bowl_stove",
-    notePhase:["approach","grasp","lift","to stove","release"],
-    photos:[
-      {noteIdx:0, src:"rollouts/corl/libero_bowl_stove/00_approach.jpg", caption:"approach"},
-      {noteIdx:1, src:"rollouts/corl/libero_bowl_stove/01_grasp.jpg", caption:"grasp"},
-      {noteIdx:2, src:"rollouts/corl/libero_bowl_stove/02_lift.jpg", caption:"lift"},
-      {noteIdx:3, src:"rollouts/corl/libero_bowl_stove/03_at_stove.jpg", caption:"above stove"},
-      {noteIdx:4, src:"rollouts/corl/libero_bowl_stove/04_release.jpg", caption:"release"}
-    ],
-    // Executed plan from the LIBERO-Pro fair-run log (sv13_goal_task_verbose)
-    notes:[
-      {type:"move_to_keypoint",label:"bowl",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:100}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"flat stove",params:{offset_z:0.05}},
-      {type:"release",label:"",params:{}}
-    ]
-  },
   capbench_stack:{
     name:"Stack (CaP-Bench)",
     rollout:"corl/capbench_stack",
@@ -449,66 +426,6 @@ const SCORES = {
       {type:"move_to_keypoint",label:"cube A",params:{}},
       {type:"grasp",label:"",params:{}},
       {type:"move_to_keypoint",label:"cube B",params:{offset_z:0.08}},
-      {type:"release",label:"",params:{}}
-    ]
-  },
-  libero_moka:{
-    name:"Both Moka Pots (LIBERO)",
-    rollout:"corl/libero_moka",
-    notePhase:["to pot","grasp","lift","to stove","release","to pot","grasp","lift","to stove","release"],
-    photos:[
-      {noteIdx:0, src:"rollouts/corl/libero_moka/00_to_pot1.jpg", caption:"to pot 1"},
-      {noteIdx:1, src:"rollouts/corl/libero_moka/01_grasp1.jpg", caption:"grasp"},
-      {noteIdx:3, src:"rollouts/corl/libero_moka/02_to_stove1.jpg", caption:"to stove"},
-      {noteIdx:4, src:"rollouts/corl/libero_moka/03_release1.jpg", caption:"release"},
-      {noteIdx:5, src:"rollouts/corl/libero_moka/04_to_pot2.jpg", caption:"to pot 2"},
-      {noteIdx:6, src:"rollouts/corl/libero_moka/05_grasp2.jpg", caption:"grasp"},
-      {noteIdx:8, src:"rollouts/corl/libero_moka/06_to_stove2.jpg", caption:"to stove"},
-      {noteIdx:9, src:"rollouts/corl/libero_moka/07_done.jpg", caption:"done"}
-    ],
-    // BT from the live SPARKPlanner (Gemini) call on the rollout's first frame (supp/videos/gemini_bt_moka.yaml)
-    notes:[
-      {type:"move_to_keypoint",label:"left moka pot",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"flat stove",params:{offset_x:0.05,offset_z:0.04}},
-      {type:"release",label:"",params:{}},
-      {type:"move_to_keypoint",label:"right moka pot",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"flat stove",params:{offset_x:-0.05,offset_z:0.04}},
-      {type:"release",label:"",params:{}}
-    ]
-  },
-  libero_basket:{
-    name:"Soup + Cheese to Basket (LIBERO)",
-    labelsTop:true,
-    labelBelow:[3,8],   // the two move_to_kp into the basket read better tucked under their note
-    labelRaise:[4,9],   // lift the two release labels a touch
-    rollout:"corl/libero_basket",
-    notePhase:["to soup","grasp","lift","to basket","release","to cheese","grasp","lift","to basket","release"],
-    photos:[
-      {noteIdx:0, src:"rollouts/corl/libero_basket/00_to_soup.jpg", caption:"to soup"},
-      {noteIdx:1, src:"rollouts/corl/libero_basket/01_grasp1.jpg", caption:"grasp"},
-      {noteIdx:3, src:"rollouts/corl/libero_basket/02_to_basket1.jpg", caption:"to basket"},
-      {noteIdx:4, src:"rollouts/corl/libero_basket/03_release1.jpg", caption:"release"},
-      {noteIdx:5, src:"rollouts/corl/libero_basket/04_to_cheese.jpg", caption:"to cheese"},
-      {noteIdx:6, src:"rollouts/corl/libero_basket/05_grasp2.jpg", caption:"grasp"},
-      {noteIdx:8, src:"rollouts/corl/libero_basket/06_to_basket2.jpg", caption:"to basket"},
-      {noteIdx:9, src:"rollouts/corl/libero_basket/07_release2.jpg", caption:"release"}
-    ],
-    // BT from the live SPARKPlanner (Gemini) call on the rollout's first frame (supp/videos/gemini_bt_basket.yaml).
-    // Benchmark log: SCENE1 soup+cheese->basket PASS (multi-step with home reset).
-    notes:[
-      {type:"move_to_keypoint",label:"alphabet soup",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"basket",params:{offset_z:0.15}},
-      {type:"release",label:"",params:{}},
-      {type:"move_to_keypoint",label:"cream cheese box",params:{offset_z:0}},
-      {type:"grasp",label:"",params:{force:60,target_width:0.04}},
-      {type:"move_relative",label:"lift",params:{dz:0.2}},
-      {type:"move_to_keypoint",label:"basket",params:{offset_z:0.15}},
       {type:"release",label:"",params:{}}
     ]
   },
@@ -877,8 +794,8 @@ let sectionGroups=[], sectionRadial=[], secPull=[], secHover=-1, secSel=-1, flat
 let introActive=false, introT=0, introMorph=[], introNotes=[], introHidden=[]; const INTRO_DUR=3.4;   // SPARK -> loop opening
 const HERO_VIDEO={sweep_cubes:'sweep2.mp4', mug_pour:'mug_pour2.mp4', silverware:'silverware.mp4', fold:'fold_single.mp4',
   sponge_soap:'sponge2.mp4', ur10e_plushie:'ur10e_plushie_bird.mp4', ur10e_plushie_dext:'ur10e_plushie_dext.mp4', ur10e_goldstack:'ur10e_goldstack.mp4', ur10e_bluestack:'ur10e_bluestack.mp4', ur10e_utensils:'ur10e_bird_utensil.mp4', bimanual_fold:'fold_bi_green.mp4',
-  libero_bowl_stove:'libero_bowl_stove.mp4', capbench_stack:'capbench_stack.mp4', capbench_lift:'capbench_lift.mp4',
-  libero_moka:'libero_moka.mp4', capbench_wipe:'capbench_wipe.mp4', capbench_nut:'capbench_nut.mp4', libero_basket:'libero_basket.mp4',
+  capbench_stack:'capbench_stack.mp4', capbench_lift:'capbench_lift.mp4',
+  capbench_wipe:'capbench_wipe.mp4', capbench_nut:'capbench_nut.mp4',
   capbench_cuberestack:'capbench_cuberestack.mp4', capbench_twoarmlift:'capbench_twoarmlift.mp4', capbench_handover:'capbench_handover.mp4',
   liberopro_goal_cheese_bowl:'liberopro_goal_cheese_bowl.mp4',
   liberopro_goal_wine_rack:'liberopro_goal_wine_rack.mp4', liberopro_object_cream_cheese:'liberopro_object_cream_cheese.mp4',
