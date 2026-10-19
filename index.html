@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SPARK: Sequential Planning via Anchored Robotic Keypoints</title>
-<meta name="description" content="SPARK separates a task's symbolic plan from its execution-time perceptual grounding: 72.6% mean success on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
+<meta name="description" content="SPARK separates a task's symbolic plan from its execution-time perceptual grounding: 66.8% mean success on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
 <!-- Open Graph / Twitter social preview card -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://cwru-aism.github.io/spark-page/">
 <meta property="og:title" content="SPARK: Sequential Planning via Anchored Robotic Keypoints">
-<meta property="og:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 72.6% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
+<meta property="og:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 66.8% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
 <meta property="og:image" content="https://cwru-aism.github.io/spark-page/static/media/og_preview.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SPARK: Sequential Planning via Anchored Robotic Keypoints">
-<meta name="twitter:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 72.6% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
+<meta name="twitter:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 66.8% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
 <meta name="twitter:image" content="https://cwru-aism.github.io/spark-page/static/media/og_preview.jpg">
 <link rel="image_src" href="static/media/og_preview.jpg">
 <link rel="icon" type="image/png" href="static/media/favicon.png">
@@ -62,7 +62,7 @@
           </div>
 
           <div class="publication-links">
-            <a class="btn-link" href="http://arxiv.org/abs/2606.30613"><i class="ai ai-arxiv"></i><span>arXiv</span></a>
+            <a class="btn-link" href="https://arxiv.org/abs/2606.30613"><i class="ai ai-arxiv"></i><span>arXiv</span></a>
             <a class="btn-link" href="#"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" fill-rule="evenodd"/></svg><span>Code coming soon</span></a>
           </div>
         </div>
@@ -111,8 +111,8 @@
             manipulation experiments with a fixed plan while moving objects during execution. Under a 10 cm
             displacement, verification and adaptation maintain <strong>66.7%</strong> task success, compared with
             <strong>2.2%</strong> when disabled, demonstrating the importance of the underlying principle. Without
-            task-specific model training, SPARK also achieves <strong>72.6%</strong> mean success across six
-            LIBERO-PRO settings and <strong>68%</strong> across eleven physical task-embodiment settings on three
+            task-specific model training and with an open-weight planner, SPARK also achieves <strong>66.8%</strong>
+            mean success across six LIBERO-PRO settings and <strong>68%</strong> across eleven physical task-embodiment settings on three
             robot platforms. Together, these results show that robustness does not require re-planning the task
             and for an important class of failures, it is sufficient to preserve the plan and update the system's
             perception of a changing world.
@@ -133,7 +133,7 @@
           <img src="static/media/figs/arch.png" alt="SPARK architecture: perception, plan, execute">
           <figcaption>
             SPARK separates the task's score from its execution. Left: perception locates objects as 3D
-            keypoints; the adaptive configuration uses an additional Gemini call to propose alternative object
+            keypoints; the adaptive configuration uses an additional language-model call to propose alternative object
             descriptions. Center: one language-model call writes the score, a behavior tree whose notes are
             skills from a fixed library. Right: the robot executes these skills using current object locations
             and checks each action's post-condition. Failed checks trigger local correction or renewed detection
@@ -143,8 +143,9 @@
         </figure>
         <div class="content has-text-justified">
           <p>
-            SAM3 grounds the scene from the platform cameras. One Gemini call writes the whole plan as a
+            SAM3 grounds the scene from the platform cameras. One language-model call writes the whole plan as a
             typed behavior tree, the score, and the robot follows it without task-specific model training.
+            The LIBERO-PRO results use the open-weight Qwen3.8-27B, served locally; the physical robots use Gemini.
             Each action refers to an object by label, which is resolved to a current 3D position when the
             action executes. A changed instruction may invalidate the task plan, while a moved object may
             instead invalidate only the perceptual grounding of an otherwise valid plan.
@@ -158,11 +159,11 @@
             Each skill checks a post-condition. A failed check triggers a three-tier recovery procedure: an
             in-place correction, such as a small motion and grasp adjustment; perception re-grounding, which
             retracts the arm by 10 cm, re-runs SAM3, and retries the same plan using updated object locations;
-            and plan regeneration through a new Gemini call only after the execution attempt is exhausted. The
+            and plan regeneration through a new language-model call only after the execution attempt is exhausted. The
             first two tiers preserve the existing behavior tree and require no additional LLM call. Five base
             primitives (move_to_keypoint, move_relative, grasp, release, wait) cover basic motion operations,
             and more than thirty registered skills add calibrated closed-loop routines such as force-feedback
-            descent, contact detection, and local retry logic. In simulation, an additional Gemini call
+            descent, contact detection, and local retry logic. In simulation, an additional language-model call
             proposes three alternative prompts per object and SAM3 confidence selects the detection; in the
             matched ablation this raises spatial success by 27.7 points and object success by 10.0, but
             lowers goal-task success by 8.4. Physical experiments use single-prompt detection.
@@ -184,9 +185,11 @@
         <p class="has-text-centered content">
           Success rates (%) over the six LIBERO-PRO position-and-task settings: three suites, two
           perturbation types per suite, ten tasks per setting, 50 trials per task. Pos changes initial
-          object placements; Task changes instructions, targets, relations, or actions. SPARK reads no
-          simulator signal during the episode in the headline row, uses no stored programs, and no BDDL hints.
+          object placements; Task changes instructions, targets, relations, or actions. The SPARK row uses the
+          open-weight Qwen3.8-27B planner, reads no simulator success signal during the episode, locates and
+          verifies drawers and the stove knob from the cameras alone, and uses no stored programs.
         </p>
+        <div style="overflow-x:auto;">
         <table class="result-table">
           <thead>
             <tr><th>Method</th><th>Object Pos</th><th>Object Task</th><th>Goal Pos</th><th>Goal Task</th><th>Spatial Pos</th><th>Spatial Task</th><th>Mean</th></tr>
@@ -199,29 +202,27 @@
             <tr><td>CaP-Agent0</td><td>22</td><td>18</td><td>26</td><td>17</td><td>12</td><td>14</td><td>18.2</td></tr>
             <tr><td>CaP-Agent0 (RATS eval)</td><td>27.0</td><td>31.0</td><td>29.0</td><td>16.0</td><td>13.0</td><td>23.0</td><td>23.2</td></tr>
             <tr><td>RATS</td><td>61.0</td><td>63.0</td><td>43.0</td><td>36.0</td><td>29.0</td><td>31.0</td><td>43.8</td></tr>
-            <tr class="ours rule"><td>SPARK (ours), unassisted</td><td>85.0</td><td>85.6</td><td>59.6</td><td>60.2</td><td>72.8</td><td>72.6</td><td>72.6</td></tr>
-            <tr><td>SPARK, verifier-assisted</td><td>84.8</td><td>86.2</td><td>62.6</td><td>61.2</td><td>74.8</td><td>71.4</td><td>73.5</td></tr>
+            <tr class="ours rule"><td>SPARK (ours)</td><td>74.4</td><td>79.8</td><td>61.2</td><td>52.4</td><td>56.4</td><td>76.4</td><td>66.8</td></tr>
           </tbody>
         </table>
+        </div>
         <p class="result-note has-text-centered">
           OpenVLA, pi0, pi0.5, and the original CaP-Agent0 rows are reproduced from the CaP-Agent0 paper;
           CaP-Agent0 (RATS eval) and RATS are from the RATS paper; MolmoAct2 is our evaluation of the released
-          LIBERO checkpoint. Three goal tasks read model part poses from the simulator; excluding them the
-          unassisted mean is 71.7%. The verifier-assisted row reads the simulator's success predicate
-          mid-episode; the unassisted row removes every such read on the same build and model.
+          LIBERO checkpoint. SPARK: 10 tasks &times; 50 trials per setting.
         </p>
         <p class="has-text-centered content">
-          SPARK reaches <strong>72.6%</strong> mean success with no simulator signal read during the episode,
-          28.8 percentage points above RATS at 43.8%. No task in either goal setting scores zero across fifty
-          trials; the remaining losses concentrate in plate-push and rack-insertion tasks.
+          SPARK reaches <strong>66.8%</strong> mean success with no simulator signal read during the episode,
+          23.0 percentage points above RATS at 43.8%. On the language and object perturbations, which were
+          not used during development, the mean is also <strong>66.8%</strong> (object 92.2 and 78.4, goal 55.2
+          and 44.4, spatial 46.0 and 84.4).
         </p>
 
         <figure class="result-fig">
           <img src="static/media/figs/libero_persuite.png" alt="LIBERO-PRO success rates per setting by method, from the table above">
           <figcaption>
-            The table above as a chart: every method's six settings and mean. The unassisted SPARK row
-            (red, <strong>72.6</strong> mean) is the headline; the verifier-assisted row (73.5) reads the
-            simulator's success predicate mid-episode. OpenVLA and &pi;<sub>0</sub> score 0 in every cell.
+            The table above as a chart: every method's six settings and mean. SPARK (red, <strong>66.8</strong>
+            mean) leads every setting. OpenVLA and &pi;<sub>0</sub> score 0 in every cell.
           </figcaption>
         </figure>
 
@@ -230,9 +231,9 @@
           <img src="static/media/figs/libero_heatmap_object.png" alt="Per-task LIBERO-PRO success, object suite">
           <img src="static/media/figs/libero_heatmap_goal.png" alt="Per-task LIBERO-PRO success, goal suite">
           <figcaption>
-            Per-task success (%) for each LIBERO-PRO suite on the headline build (50 trials per task):
-            SPARK unassisted (top two rows, the headline row of the table above), SPARK verifier-assisted
-            (middle two rows), and MolmoAct2 (bottom two rows). SPARK outperforms MolmoAct2 on task-level
+            Per-task success (%) for each LIBERO-PRO suite (50 trials per task): SPARK position and task
+            (top two rows, the table above), SPARK on the held-out language and object perturbations
+            (middle two rows, marked *), and MolmoAct2 (bottom two rows). SPARK outperforms MolmoAct2 on task-level
             perturbation across all three suites; MolmoAct2 achieves higher position accuracy on specific
             object-suite tasks but scores near zero on task perturbation.
           </figcaption>
