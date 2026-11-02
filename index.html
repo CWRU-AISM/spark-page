@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SPARK: Sequential Planning via Anchored Robotic Keypoints</title>
-<meta name="description" content="SPARK separates a task's symbolic plan from its execution-time perceptual grounding: 66.8% mean success on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
+<meta name="description" content="SPARK separates a task's symbolic plan from its execution-time perceptual grounding: 75.1% mean success on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
 <!-- Open Graph / Twitter social preview card -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://cwru-aism.github.io/spark-page/">
 <meta property="og:title" content="SPARK: Sequential Planning via Anchored Robotic Keypoints">
-<meta property="og:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 66.8% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
+<meta property="og:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 75.1% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
 <meta property="og:image" content="https://cwru-aism.github.io/spark-page/static/media/og_preview.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="SPARK: Sequential Planning via Anchored Robotic Keypoints">
-<meta name="twitter:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 66.8% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
+<meta name="twitter:description" content="Separating a task's symbolic plan from its execution-time perceptual grounding: 75.1% on six LIBERO-PRO settings and 68% across eleven physical task-embodiment settings on three robot platforms, without task-specific model training.">
 <meta name="twitter:image" content="https://cwru-aism.github.io/spark-page/static/media/og_preview.jpg">
 <link rel="image_src" href="static/media/og_preview.jpg">
 <link rel="icon" type="image/png" href="static/media/favicon.png">
@@ -97,25 +97,23 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Changes in a robot's observations do not automatically imply changes in the task it is solving, but
-            language-conditioned manipulation systems often fail to separate the two. If an object moves, for
-            example, the locations at which actions should be executed may change while the underlying
-            manipulation plan remains valid. We introduce Sequential Planning via Anchored Robotic Keypoints
-            (<span class="sc">Spark</span>), which separates a task's symbolic plan from its execution-time
-            perceptual grounding, and we experimentally isolate whether a fixed symbolic plan can survive
-            substantial changes to the scene through execution-time re-grounding. SPARK represents the task as a
-            symbolic behavior tree whose object references are grounded to current 3D observations during
-            execution, allowing the robot to update where actions are performed while preserving the plan.
-            Runtime verification then enables local recovery and renewed grounding, only resorting to a new plan
-            if necessary. To test the separation between plan and perceptual grounding, we perform a set of
-            manipulation experiments with a fixed plan while moving objects during execution. Under a 10 cm
-            displacement, verification and adaptation maintain <strong>66.7%</strong> task success, compared with
-            <strong>2.2%</strong> when disabled, demonstrating the importance of the underlying principle. Without
-            task-specific model training and with an open-weight planner, SPARK also achieves <strong>66.8%</strong>
-            mean success across six LIBERO-PRO settings and <strong>68%</strong> across eleven physical task-embodiment settings on three
-            robot platforms. Together, these results show that robustness does not require re-planning the task
-            and for an important class of failures, it is sufficient to preserve the plan and update the system's
-            perception of a changing world.
+            Changes to what a robot can see do not mean that there is a change in the problem it is trying to solve,
+            and many language-conditioned manipulation systems struggle with this distinction. When something in a
+            scene moves, the robot might need to execute its actions in different places, but its manipulation plan
+            can stay the same. We propose Sequential Planning via Anchored Robotic Keypoints
+            (<span class="sc">Spark</span>), which describes a task as a symbolic behavior tree that we anchor to the
+            current 3D observations when each action is called. By verifying the plan at runtime we can recover from
+            failures locally and anchor the objects to the scene again. We ask for a new plan only if this fails. We
+            isolate this concept by taking a fixed plan and moving objects in the scene while executing. When
+            displacing objects by 10&nbsp;cm we were still able to complete <strong>66.7%</strong> of trials with
+            scene-diff verification and layered recovery, and we did not have to change the plan. Without practicing
+            on the tasks being tested or using ground-truth object poses from the simulator during rollouts, we test
+            our full system (with one open-weight 27B planner with 4-bit weights) on LIBERO-PRO. Under this protocol
+            SPARK achieves a mean success of <strong>75.1%</strong> across the 6 position and task settings and
+            <strong>69.7%</strong> on the held-out language and object settings. We also achieve a
+            <strong>68%</strong> success rate across 11 physical task-embodiment settings on 3 different robots. Our
+            work demonstrates that for an important class of failures, the robot does not need to ask for a new plan
+            for its task. It can be enough to update the system's view of the world.
           </p>
         </div>
       </div>
@@ -143,30 +141,33 @@
         </figure>
         <div class="content has-text-justified">
           <p>
-            SAM3 grounds the scene from the platform cameras. One language-model call writes the whole plan as a
-            typed behavior tree, the score, and the robot follows it without task-specific model training.
-            The LIBERO-PRO results use the open-weight Qwen3.8-27B, served locally; the physical robots use Gemini.
-            Each action refers to an object by label, which is resolved to a current 3D position when the
-            action executes. A changed instruction may invalidate the task plan, while a moved object may
-            instead invalidate only the perceptual grounding of an otherwise valid plan.
-            &ldquo;Put the bowl on the plate&rdquo; calls for the same score whether the bowl
-            starts on the left or the right. Only the pixels that the label bowl binds to have
-            moved. SPARK revises the level of representation that the change actually invalidates: when the
-            task structure remains valid, renewed perception and local execution are sufficient without
-            solving the task again.
+            SAM3 grounds the objects seen by the platform cameras. One language-model call writes the entire plan as a
+            typed behavior tree, the score, and the robot executes it with no task-specific model training. The
+            LIBERO-PRO results use the open-weight Qwen3.8-27B with 4-bit weights, served locally; the perception
+            ablation and the physical robots use Gemini. Actions reference objects by label, and at execution time
+            each label is grounded to a current 3D position. A modified instruction can invalidate the plan, while a
+            moved object typically only makes the plan's object locations incorrect. Putting the bowl on the plate
+            should use the same score whether the bowl started on the left or the right, because only the pixels that
+            the label bowl refers to have moved. SPARK keeps the plan and updates what perception says about the scene.
           </p>
           <p>
-            Each skill checks a post-condition. A failed check triggers a three-tier recovery procedure: an
-            in-place correction, such as a small motion and grasp adjustment; perception re-grounding, which
-            retracts the arm by 10 cm, re-runs SAM3, and retries the same plan using updated object locations;
-            and plan regeneration through a new language-model call only after the execution attempt is exhausted. The
-            first two tiers preserve the existing behavior tree and require no additional LLM call. Five base
-            primitives (move_to_keypoint, move_relative, grasp, release, wait) cover basic motion operations,
-            and more than thirty registered skills add calibrated closed-loop routines such as force-feedback
-            descent, contact detection, and local retry logic. In simulation, an additional language-model call
-            proposes three alternative prompts per object and SAM3 confidence selects the detection; in the
-            matched ablation this raises spatial success by 27.7 points and object success by 10.0, but
-            lowers goal-task success by 8.4. Physical experiments use single-prompt detection.
+            Each skill checks a post-condition. When a check fails, up to three tiers of recovery are tried in order.
+            Tier 1 is an in-place correction, like a small motion and a re-grasp. Tier 2 is re-perception: retract the
+            arm 10 cm, run SAM3 again, and re-execute the same plan with updated object locations. Tier 3 asks the
+            language model for a replacement plan, but only after the execution attempt is exhausted. Tiers 1 and 2
+            keep the behavior tree and need no language-model call. Five base primitives (move_to_keypoint,
+            move_relative, grasp, release, wait) cover basic motion; over thirty registered skills implement
+            closed-loop behaviors such as descending until a force is reached, detecting contact, and retrying
+            locally. All skills were written with Claude Code against a typed contract and checked by the authors, and
+            the skill registry does not change during any reported run.
+          </p>
+          <p>
+            In simulation, one additional language-model call suggests three prompts per object, and SAM3 confidence
+            selects the detection. On the matched ablation this raises spatial success by 26.5 points and object
+            success by 8.2, but lowers goal-task success by 8.4. LIBERO-PRO adds two more grounding steps. The planner
+            chooses an uncertain pick target from numbered wrist-camera crops taken at the home pose. When a scene has
+            multiple copies of an object, a hand-coded rule picks one from the relation in the instruction (between,
+            next to, on, in) without asking the language model. Physical robots use one prompt per object.
           </p>
         </div>
       </div>
@@ -183,11 +184,12 @@
 
         <h3 class="title is-5 has-text-centered">LIBERO-PRO</h3>
         <p class="has-text-centered content">
-          Success rates (%) over the six LIBERO-PRO position-and-task settings: three suites, two
-          perturbation types per suite, ten tasks per setting, 50 trials per task. Pos changes initial
-          object placements; Task changes instructions, targets, relations, or actions. The SPARK row uses the
-          open-weight Qwen3.8-27B planner, reads no simulator success signal during the episode, locates and
-          verifies drawers and the stove knob from the cameras alone, and uses no stored programs.
+          Success rates (%) over the six LIBERO-PRO position and task settings: three suites, two perturbation
+          types per suite, ten tasks per setting, 50 trials per task, on LIBERO-PRO's own initial states. Pos moves
+          where objects start; Task changes the instruction, target object, relation, or action. The SPARK row uses
+          the open-weight Qwen3.8-27B planner, no ground-truth object poses, and no stored programs, and checks
+          pushes, drawers, and knobs from the cameras alone. As in the RATS evaluation, a success check after each
+          attempt decides whether to retry. No scored episode is used for practice.
         </p>
         <div style="overflow-x:auto;">
         <table class="result-table">
@@ -202,26 +204,27 @@
             <tr><td>CaP-Agent0</td><td>22</td><td>18</td><td>26</td><td>17</td><td>12</td><td>14</td><td>18.2</td></tr>
             <tr><td>CaP-Agent0 (RATS eval)</td><td>27.0</td><td>31.0</td><td>29.0</td><td>16.0</td><td>13.0</td><td>23.0</td><td>23.2</td></tr>
             <tr><td>RATS</td><td>61.0</td><td>63.0</td><td>43.0</td><td>36.0</td><td>29.0</td><td>31.0</td><td>43.8</td></tr>
-            <tr class="ours rule"><td>SPARK (ours)</td><td>74.4</td><td>79.8</td><td>61.2</td><td>52.4</td><td>56.4</td><td>76.4</td><td>66.8</td></tr>
+            <tr class="ours rule"><td>SPARK (ours)</td><td>86.4</td><td>82.4</td><td>71.6</td><td>61.8</td><td>65.4</td><td>83.0</td><td>75.1</td></tr>
           </tbody>
         </table>
         </div>
         <p class="result-note has-text-centered">
           OpenVLA, pi0, pi0.5, and the original CaP-Agent0 rows are reproduced from the CaP-Agent0 paper;
           CaP-Agent0 (RATS eval) and RATS are from the RATS paper; MolmoAct2 is our evaluation of the released
-          LIBERO checkpoint. SPARK: 10 tasks &times; 50 trials per setting.
+          LIBERO checkpoint. SPARK: 10 tasks &times; 50 trials per setting, on LIBERO-PRO's initial states.
         </p>
         <p class="has-text-centered content">
-          SPARK reaches <strong>66.8%</strong> mean success with no simulator signal read during the episode,
-          23.0 percentage points above RATS at 43.8%. On the language and object perturbations, which were
-          not used during development, the mean is also <strong>66.8%</strong> (object 92.2 and 78.4, goal 55.2
-          and 44.4, spatial 46.0 and 84.4).
+          SPARK reaches <strong>75.1%</strong> mean success, 31.3 points above RATS at 43.8%. On the language and
+          object perturbations, which were not used to derive the grounding rules, SPARK averages
+          <strong>69.7%</strong> (object 92.4 and 77.4, goal 64.6 and 47.2, spatial 50.8 and 85.8). When retries are
+          decided only by the robot's own grasp and scene checks and the success check runs once after execution,
+          SPARK scores 67.5% on the same six settings.
         </p>
 
         <figure class="result-fig">
           <img src="static/media/figs/libero_persuite.png" alt="LIBERO-PRO success rates per setting by method, from the table above">
           <figcaption>
-            The table above as a chart: every method's six settings and mean. SPARK (red, <strong>66.8</strong>
+            The table above as a chart: every method's six settings and mean. SPARK (red, <strong>75.1</strong>
             mean) leads every setting. OpenVLA and &pi;<sub>0</sub> score 0 in every cell.
           </figcaption>
         </figure>
@@ -233,22 +236,22 @@
           <figcaption>
             Per-task success (%) for each LIBERO-PRO suite (50 trials per task): SPARK position and task
             (top two rows, the table above), SPARK on the held-out language and object perturbations
-            (middle two rows, marked *), and MolmoAct2 (bottom two rows). SPARK outperforms MolmoAct2 on task-level
-            perturbation across all three suites; MolmoAct2 achieves higher position accuracy on specific
-            object-suite tasks but scores near zero on task perturbation.
+            (middle two rows, marked *), and MolmoAct2 (bottom two rows). SPARK is above MolmoAct2 on task perturbation in
+            all three suites. MolmoAct2 is higher on position for four tasks (two in object, one each in spatial and
+            goal) and averages 12% or less on task perturbation.
           </figcaption>
         </figure>
 
-        <h3 class="title is-5 has-text-centered" style="margin-top:2.6rem;">Recovering when objects move (LIBERO-Dyn)</h3>
+        <h3 class="title is-5 has-text-centered" style="margin-top:2.6rem;">Recovering when objects move (LIBERO-Displace)</h3>
         <p class="has-text-centered content">
-          Identical scripted plans run with verification and adaptation enabled or disabled together, on three
-          object-suite tasks, three injection phases, and five initial states, for 45 trials at each displacement
-          magnitude. The object slides over 40 simulator steps by 0 to 10 cm on the same seeded schedule for both
-          conditions; the planner is not in the loop.
+          Identical scripted plans run with scene-diff verification and layered recovery switched on or off together,
+          on three object-suite tasks, three injection phases, and five initial states: 45 trials per displacement.
+          The object slides by 0 to 10 cm over 40 simulator steps on the same seeded schedule in both conditions, and
+          object detections update between primitives in both. The planner is not in the loop.
         </p>
         <table class="result-table" style="max-width:560px;">
           <thead>
-            <tr><th>Verification and adaptation</th><th>0 cm</th><th>2 cm</th><th>5 cm</th><th>10 cm</th></tr>
+            <tr><th>Verification and recovery</th><th>0 cm</th><th>2 cm</th><th>5 cm</th><th>10 cm</th></tr>
           </thead>
           <tbody>
             <tr class="ours"><td>Enabled</td><td>39/45</td><td>37/45</td><td>35/45</td><td>30/45</td></tr>
@@ -256,18 +259,18 @@
           </tbody>
         </table>
         <p class="has-text-centered content">
-          At 10 cm, success is 30/45 (<strong>66.7%</strong>) with verification and adaptation, compared with
-          1/45 (<strong>2.2%</strong>) when both are disabled. The difference grows from six successful trials
-          at 0 cm to twenty-nine at 10 cm. Because the plans are fixed, execution checks and recovery preserve
-          success while retaining the same plan.
+          At 10 cm, verification and recovery let SPARK succeed in 30 of 45 trials (<strong>66.7%</strong>), against
+          1 of 45 without. The gap grows from six trials at 0 cm to twenty-nine at 10 cm, and the plan does not change
+          in any trial. As in the LIBERO-PRO table, a success check after each attempt can also trigger recovery. When
+          only the robot's own checks trigger it, the 10 cm cell is 12/45 against 1/45.
         </p>
 
         <h3 class="title is-5 has-text-centered" style="margin-top:2.6rem;">CaP-Bench (Robosuite)</h3>
         <p class="has-text-centered content is-size-6 has-text-grey">
-          Per-task success (%). SPARK and CaP-Agent0 use 100 trials per task; RATS uses its 50-trial
-          skill-transfer evaluation. SPARK averages 63.4% against 68.3% for CaP-Agent0's three-model ensemble,
-          succeeding in 100% of Lift and CubeRestack trials and 97% of Stack trials, while success falls to 60%
-          for Wipe, 63% for TwoArmLift, and 0% for NutAssemblySquare.
+          Per-task success (%). SPARK and CaP-Agent0 use 100 trials per task; RATS uses its 50-trial skill-transfer
+          evaluation. With the Qwen planner SPARK averages 65.1% against 68.3% for CaP-Agent0's three-model ensemble.
+          It completes Lift in every trial, CubeRestack in 97% and Stack in 93%, reaches 77% on TwoArmLift and 30% on
+          TwoArmHandover, and drops to 57% on Wipe and 2% on NutAssemblySquare.
         </p>
         <figure class="result-fig">
           <img src="static/media/figs/capbench.png" alt="CaP-Bench per-task success, CaP-Agent0 vs RATS vs SPARK">
@@ -331,13 +334,13 @@
       <div class="column is-one-third"><div class="vcard" data-score="sponge_soap"><video src="score_visualizer/videos/sponge3.mp4" autoplay muted loop playsinline></video><p>Sponge wash<span class="emb">Franka FR3, repeat trial</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_fail_blue.mp4" autoplay muted loop playsinline></video><p>T-shirt fold failure case<span class="emb">Bimanual Franka, partial fold on blue shirt</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="bimanual_fold"><video src="score_visualizer/videos/fold_bi_fail_pinch.mp4" autoplay muted loop playsinline></video><p>T-shirt fold failure case<span class="emb">Bimanual Franka, missed hem pinch</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="capbench_lift"><video src="score_visualizer/videos/capbench_lift.mp4" autoplay muted loop playsinline></video><p>Lift<span class="emb">CaP-Bench sim, 100% at 100 trials</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="capbench_stack"><video src="score_visualizer/videos/capbench_stack.mp4" autoplay muted loop playsinline></video><p>Stack<span class="emb">CaP-Bench sim, 97% at 100 trials</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="capbench_cuberestack"><video src="score_visualizer/videos/capbench_cuberestack.mp4" autoplay muted loop playsinline></video><p>Cube restack<span class="emb">CaP-Bench sim, 100% at 100 trials</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="capbench_twoarmlift"><video src="score_visualizer/videos/capbench_twoarmlift.mp4" autoplay muted loop playsinline></video><p>Two-arm lift<span class="emb">CaP-Bench sim, 63% at 100 trials</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="capbench_wipe"><video src="score_visualizer/videos/capbench_wipe.mp4" autoplay muted loop playsinline></video><p>Wipe<span class="emb">CaP-Bench sim, 60% at 100 trials</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="capbench_nut"><video src="score_visualizer/videos/capbench_nut.mp4" autoplay muted loop playsinline></video><p>Nut assembly<span class="emb">CaP-Bench sim, 0% at 100 trials: threading needs pose control under contact that the OSC layer cannot hold</span></p></div></div>
-      <div class="column is-one-third"><div class="vcard" data-score="capbench_handover"><video src="score_visualizer/videos/capbench_handover.mp4" autoplay muted loop playsinline></video><p>Two-arm handover<span class="emb">CaP-Bench sim, 24% at 100 trials</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_lift"><video src="score_visualizer/videos/capbench_lift.mp4" autoplay muted loop playsinline></video><p>Lift<span class="emb">CaP-Bench sim</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_stack"><video src="score_visualizer/videos/capbench_stack.mp4" autoplay muted loop playsinline></video><p>Stack<span class="emb">CaP-Bench sim</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_cuberestack"><video src="score_visualizer/videos/capbench_cuberestack.mp4" autoplay muted loop playsinline></video><p>Cube restack<span class="emb">CaP-Bench sim</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_twoarmlift"><video src="score_visualizer/videos/capbench_twoarmlift.mp4" autoplay muted loop playsinline></video><p>Two-arm lift<span class="emb">CaP-Bench sim</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_wipe"><video src="score_visualizer/videos/capbench_wipe.mp4" autoplay muted loop playsinline></video><p>Wipe<span class="emb">CaP-Bench sim</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_nut"><video src="score_visualizer/videos/capbench_nut.mp4" autoplay muted loop playsinline></video><p>Nut assembly<span class="emb">CaP-Bench sim</span></p></div></div>
+      <div class="column is-one-third"><div class="vcard" data-score="capbench_handover"><video src="score_visualizer/videos/capbench_handover.mp4" autoplay muted loop playsinline></video><p>Two-arm handover<span class="emb">CaP-Bench sim</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_cream_cheese"><video src="score_visualizer/videos/liberopro_object_cream_cheese.mp4" autoplay muted loop playsinline></video><p>Cream cheese to basket<span class="emb">LIBERO-PRO, object suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_object_milk"><video src="score_visualizer/videos/liberopro_object_milk.mp4" autoplay muted loop playsinline></video><p>Milk to basket<span class="emb">LIBERO-PRO, object suite, pass</span></p></div></div>
       <div class="column is-one-third"><div class="vcard" data-score="liberopro_spatial_next_ramekin"><video src="score_visualizer/videos/liberopro_spatial_next_ramekin.mp4" autoplay muted loop playsinline></video><p>Bowl next to ramekin onto plate<span class="emb">LIBERO-PRO, spatial suite, pass</span></p></div></div>
@@ -368,7 +371,9 @@
   title  = {Sequential Planning via Anchored Robotic Keypoints},
   author = {Grant, Bryce and Rothenberg, Aryeh and Senning, Logan
             and Chua, Zonghe and Patterson, Zach and Wang, Peng},
-  year   = {2026}
+  year   = {2026},
+  eprint = {2606.30613},
+  archivePrefix = {arXiv}
 }</code></pre>
   </div>
 </section>
