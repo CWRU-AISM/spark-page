@@ -69,7 +69,7 @@ html.export-mode #panel{display:none!important}
   <option value="liberopro_object_tomato_sauce">Object: Tomato Sauce to Basket (LIBERO-PRO) - 5 notes</option>
   <option value="liberopro_spatial_next_ramekin">Spatial: Bowl next to Ramekin (LIBERO-PRO) - 5 notes</option>
   <option value="liberopro_spatial_table_center">Spatial: Bowl from Table Center (LIBERO-PRO) - 5 notes</option>
-  <option value="medley">Medley - 10 tasks, sim + 3 robots (loop)</option>
+  <option value="medley">Medley - 12 tasks, sim + 3 robots (loop)</option>
 </select>
 
 <script type="importmap">
@@ -704,7 +704,7 @@ const SCORES = {
 // Medley: sweep + pour + fold (bimanual) + sponge, each its own normal staff,
 // rotated + translated into a ring (loop) in the XY plane. Pan to travel the loop.
 SCORES.medley={ name:"Medley (loop)", medley:true,
-  scores:["sweep_cubes","mug_pour","silverware","fold","sponge_soap","ur10e_plushie_dext","ur10e_utensils","bimanual_fold","capbench_nut","ur10e_bluestack"] };
+  scores:["sweep_cubes","mug_pour","silverware","fold","sponge_soap","ur10e_plushie_dext","ur10e_utensils","bimanual_fold","capbench_nut","ur10e_bluestack","liberopro_object_cream_cheese","liberopro_spatial_next_ramekin"] };
 
 // MUSIC MAPPINGS
 const GRASP=new Set(['grasp_se3','grasp','pick_with_arm','grasp_arm']);
