@@ -790,7 +790,7 @@ const raycaster=new THREE.Raycaster();
 const mouse=new THREE.Vector2();
 let root=new THREE.Group(); scene.add(root);
 // Hero section-separation state (only used when HERO): per-section group + outward dir.
-let sectionGroups=[], sectionRadial=[], secPull=[], secHover=-1, secSel=-1, flatOverlay=null, heroVidEl=null;
+let sectionGroups=[], sectionRadial=[], secPull=[], secHover=-1, secSel=-1, flatOverlay=null, heroVidEl=null, loopA=1, loopMats=null;
 let introActive=false, introT=0, introMorph=[], introNotes=[], introHidden=[]; const INTRO_DUR=3.4;   // SPARK -> loop opening
 const HERO_VIDEO={sweep_cubes:'sweep2.mp4', mug_pour:'mug_pour2.mp4', silverware:'silverware.mp4', fold:'fold_single.mp4',
   sponge_soap:'sponge2.mp4', ur10e_plushie:'ur10e_plushie_bird.mp4', ur10e_plushie_dext:'ur10e_plushie_dext.mp4', ur10e_goldstack:'ur10e_goldstack.mp4', ur10e_bluestack:'ur10e_bluestack.mp4', ur10e_utensils:'ur10e_bird_utensil.mp4', bimanual_fold:'fold_bi_green.mp4',
@@ -1327,7 +1327,7 @@ function load(key){
     ribbonOn=true; ribN=N;
     ribFrontU=1/(2*N);                              // centre of score 0 = the front (twist 0 here)
     if(secTwist.length!==N){ secTwist=new Array(N).fill(0); secBend=new Array(N).fill(1); secLift=new Array(N).fill(1); }
-    if(HERO){ destroyFlatOverlay(); sectionGroups=[]; sectionRadial=[]; secPull=[]; secHover=-1; secSel=-1; }
+    if(HERO){ destroyFlatOverlay(); sectionGroups=[]; sectionRadial=[]; secPull=[]; secHover=-1; secSel=-1; loopA=1; loopMats=null; }
     score.scores.forEach((k,i)=>{
       const p=new THREE.Group(); root.add(p); newCanvasGroups(p);   // identity: cPos already returns loop-space coords
       ribU0=i/N; ribU1=(i+1)/N;                                     // this score's arc of the loop
@@ -1685,7 +1685,7 @@ function buildFlatOverlay(i){
     const pp=heroVidEl.play(); if(pp)pp.catch(()=>{});
   }
 }
-function selectSec(k){ secSel=k; secHover=-1; if(k>=0) buildFlatOverlay(k); else destroyFlatOverlay(); }
+function selectSec(k){ secSel=k; secHover=-1; if(k>=0) buildFlatOverlay(k); else if(flatOverlay) flatOverlay.userData.closing=true; }   // close fades out in updateSeparation
 function updateSeparation(){
   for(let i=0;i<sectionGroups.length;i++){
     const g=sectionGroups[i]; if(!g) continue;
@@ -1694,15 +1694,27 @@ function updateSeparation(){
     const r=sectionRadial[i], s=SEC_PULL*secPull[i];
     g.position.set(r.x*s, r.y*s, r.z*s);
   }
-  root.visible = !(secSel>=0);                                               // staff is morphed in place during the intro (notes/photos hidden separately)
+  // cross-fade the loop against the flat score: fade out on open, back in on close
+  const lt=(secSel>=0)?0:1;
+  if(lt!==loopA || loopMats){
+    loopA=lt>loopA?Math.min(1,loopA+0.02):Math.max(0,loopA-0.035);   // back in slower than out
+    if(!loopMats){ loopMats=[]; root.traverse(o=>{ if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(!m.userData._lf){ m.userData._lf={t:m.transparent,o:m.opacity}; loopMats.push(m); } }); }); }
+    const le=loopA*loopA*(3-2*loopA);
+    for(const m of loopMats){ m.transparent=true; m.opacity=m.userData._lf.o*le; }
+    if(loopA===lt && lt===1){ for(const m of loopMats){ m.transparent=m.userData._lf.t; m.opacity=m.userData._lf.o; delete m.userData._lf; } loopMats=null; }
+  }
+  root.visible = loopA>0.002;                                                // staff is morphed in place during the intro (notes/photos hidden separately)
   if(flatOverlay){
-    flatOverlay.userData.t=Math.min(1, flatOverlay.userData.t+0.035);        // slower flatten
+    const cl=flatOverlay.userData.closing;
+    flatOverlay.userData.t=cl?Math.max(0, flatOverlay.userData.t-0.02):Math.min(1, flatOverlay.userData.t+0.035);   // slower flatten / unflatten
+    if(cl && flatOverlay.userData.t<=0){ destroyFlatOverlay(); return; }
     const e=flatOverlay.userData.t, ease=e*e*(3-2*e);                        // smoothstep: ease in + out
     const camDir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
     flatOverlay.position.copy(camera.position).addScaledVector(camDir,12);   // billboard close, front-centre
     flatOverlay.quaternion.copy(camera.quaternion);
     flatOverlay.scale.setScalar(0.62*(0.9+0.1*ease));                        // subtle settle, no pop
-    const mats=flatOverlay.userData.mats; if(mats) for(const m of mats) m.opacity=ease;   // fade in
+    const mats=flatOverlay.userData.mats; if(mats) for(const m of mats) m.opacity=ease;   // fade in / out
+    if(heroVidEl) heroVidEl.style.opacity=ease;
   }
 }
 if(HERO){
