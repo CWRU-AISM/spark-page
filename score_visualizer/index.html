@@ -790,7 +790,7 @@ const raycaster=new THREE.Raycaster();
 const mouse=new THREE.Vector2();
 let root=new THREE.Group(); scene.add(root);
 // Hero section-separation state (only used when HERO): per-section group + outward dir.
-let sectionGroups=[], sectionRadial=[], secPull=[], secHover=-1, secSel=-1, flatOverlay=null, heroVidEl=null, loopA=1, loopMats=null;
+let sectionGroups=[], sectionRadial=[], secPull=[], secHover=-1, secSel=-1, flatOverlay=null, heroVidEl=null, loopA=1, loopMats=null, pendSec=-1, pendWait=false, glideV=0, spinV=0, lastNow=0;
 let introActive=false, introT=0, introMorph=[], introNotes=[], introHidden=[]; const INTRO_DUR=3.4;   // SPARK -> loop opening
 const HERO_VIDEO={sweep_cubes:'sweep2.mp4', mug_pour:'mug_pour2.mp4', silverware:'silverware.mp4', fold:'fold_single.mp4',
   sponge_soap:'sponge2.mp4', ur10e_plushie:'ur10e_plushie_bird.mp4', ur10e_plushie_dext:'ur10e_plushie_dext.mp4', ur10e_goldstack:'ur10e_goldstack.mp4', ur10e_bluestack:'ur10e_bluestack.mp4', ur10e_utensils:'ur10e_bird_utensil.mp4', bimanual_fold:'fold_bi_green.mp4',
@@ -828,7 +828,7 @@ let RIB_PERIODS=1;      // depth-bend cycles per section -- INTEGER keeps the be
 let ribAMP=2.0;         // depth-bend amplitude (along B, toward/away from the staff face)
 let ribLIFT=1.0;        // lift-bend amplitude (along U, the staff rising/falling in its own plane)
 let RIB_LIFT_PERIODS=1; // lift-bend cycles per section (INTEGER -> seam-safe like the depth bend)
-let ribSpin=0.5;        // loop spin speed
+let ribSpin=parseFloat(_urlP.get('spin'))||0.5;        // loop spin speed
 // Per-section (per score) tuning, blended smoothly around the loop (sampleSec) so seams stay
 // closed. secTwist defaults reproduce the reversed front-flat twist; secBend/secLift = depth/lift mult.
 let secTwist=[0,-0.5,0.4,-0.4,0.5,-0.4,0.4,-0.4,0.4,-0.5];
@@ -869,16 +869,19 @@ function ribbonFrame(u){
   return {p,T,U,B};
 }
 
+// Where a staff point lands on the loop: u = loop parameter, t = position within its section,
+// offY/offB = offsets in the staff plane / along its normal.
+function ribbonAt(u,t,offY,offB){
+  const offZ=ribAMP *sampleSec(secBend,u)*Math.sin(t*Math.PI*2*RIB_PERIODS);       // bend along B (depth)
+  const offU=ribLIFT*sampleSec(secLift,u)*Math.sin(t*Math.PI*2*RIB_LIFT_PERIODS);  // bend along U (lift)
+  const f=ribbonFrame(u);
+  return f.p.addScaledVector(f.U,offY+offU).addScaledVector(f.B,offZ+offB);  // f.p is a fresh vector
+}
+
 function cPos(t,line,staveY){
   staveY=staveY||0;
   const offY=((line-(SL-1)/2)*LG + staveY)*VS;
-  if(ribbonOn){
-    const u=ribU0 + t*(ribU1-ribU0);
-    const offZ=ribAMP *sampleSec(secBend,u)*Math.sin(t*Math.PI*2*RIB_PERIODS);       // bend along B (depth)
-    const offU=ribLIFT*sampleSec(secLift,u)*Math.sin(t*Math.PI*2*RIB_LIFT_PERIODS);  // bend along U (lift)
-    const f=ribbonFrame(u);
-    return f.p.addScaledVector(f.U,offY+offU).addScaledVector(f.B,offZ);  // f.p is a fresh vector
-  }
+  if(ribbonOn) return ribbonAt(ribU0 + t*(ribU1-ribU0), t, offY, 0);
   const offZ=flatNoBend?0:AMP*Math.sin(t*Math.PI*2*PERIODS);
   return new THREE.Vector3((t-0.5)*W + SCORE_XOFF, offY, offZ);
 }
@@ -1212,6 +1215,7 @@ function addPhotoPlane(src, tNorm, staveY, pw, ph, photoGroup){
       const plane = new THREE.Mesh(planeG, planeM);
       plane.position.copy(photoCenter);
       plane.quaternion.copy(photoQuat);
+      plane.userData.photo=true;
       photoGroup.add(plane);
       if(introActive){ plane.visible=false; introHidden.push(plane); }   // stay hidden until the intro reveals
       resolve();
@@ -1327,7 +1331,7 @@ function load(key){
     ribbonOn=true; ribN=N;
     ribFrontU=1/(2*N);                              // centre of score 0 = the front (twist 0 here)
     if(secTwist.length!==N){ secTwist=new Array(N).fill(0); secBend=new Array(N).fill(1); secLift=new Array(N).fill(1); }
-    if(HERO){ destroyFlatOverlay(); sectionGroups=[]; sectionRadial=[]; secPull=[]; secHover=-1; secSel=-1; loopA=1; loopMats=null; }
+    if(HERO){ destroyFlatOverlay(); sectionGroups=[]; sectionRadial=[]; secPull=[]; secHover=-1; secSel=-1; loopA=1; loopMats=null; pendSec=-1; }
     score.scores.forEach((k,i)=>{
       const p=new THREE.Group(); root.add(p); newCanvasGroups(p);   // identity: cPos already returns loop-space coords
       ribU0=i/N; ribU1=(i+1)/N;                                     // this score's arc of the loop
@@ -1352,6 +1356,7 @@ function load(key){
   renderStaff(score);
 }
 
+const flatOnly=o=>{ o.userData.flatOnly=true; return o; };   // fades in once the section has flattened
 function renderStaff(score, medley, noPhotos){
   const notes=score.notes,N=notes.length;
   const phrases=analyzeLegato(notes);
@@ -1412,13 +1417,13 @@ function renderStaff(score, medley, noPhotos){
     if(isBi){
       drawStaff(ry+1.2); drawStaff(ry-1.2);
       if(!noClefs){
-        annoG.add(clefSprite(0.06,ry+1.2)); annoG.add(bassClefSprite(0.06,ry-1.2));
-        annoG.add(timeSigSprite(0.12,ry+1.2)); annoG.add(timeSigSprite(0.12,ry-1.2));
+        annoG.add(flatOnly(clefSprite(0.06,ry+1.2))); annoG.add(flatOnly(bassClefSprite(0.06,ry-1.2)));
+        annoG.add(flatOnly(timeSigSprite(0.12,ry+1.2))); annoG.add(flatOnly(timeSigSprite(0.12,ry-1.2)));
       }
-      if(!noClefs) annoG.add(braceSprite(0.005,ry+1.2,ry-1.2));   // brace only in the flat/standalone view; it pokes out of the warped ribbon
+      if(!noClefs) annoG.add(flatOnly(braceSprite(0.005,ry+1.2,ry-1.2)));   // brace only in the flat/standalone view; it pokes out of the warped ribbon
     } else {
       drawStaff(ry);
-      if(!noClefs){ annoG.add(clefSprite(0.06,ry)); annoG.add(timeSigSprite(0.12,ry)); }
+      if(!noClefs){ annoG.add(flatOnly(clefSprite(0.06,ry))); annoG.add(flatOnly(timeSigSprite(0.12,ry))); }
     }
   }
 
@@ -1656,77 +1661,143 @@ function pickSec(e){
 }
 function destroyFlatOverlay(){
   if(!flatOverlay) return;
+  flatOverlay.userData.hidden.forEach(o=>{ o.visible=true; });
   flatOverlay.traverse(o=>{ if(o.geometry)o.geometry.dispose(); if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(m=>{if(m.map)m.map.dispose(); m.dispose();});} });
   scene.remove(flatOverlay); flatOverlay=null;
   if(heroVidEl){ heroVidEl.pause(); if(heroVidEl.parentNode) heroVidEl.parentNode.removeChild(heroVidEl); heroVidEl=null; }
 }
+// Build the flat score, then bake every vertex's two places: on the flat page and on the loop. updateSeparation
+// slides between them, so the section itself pulls out, unrolls, and later curls back into its slot.
 function buildFlatOverlay(i){
   destroyFlatOverlay();
   const key=curScore.scores[i];
-  flatOverlay=new THREE.Group(); flatOverlay.userData.t=0; scene.add(flatOverlay);
-  // flat score (real notes + clefs, no rollout photos) rendered into a sub-group, up top
+  flatOverlay=new THREE.Group(); flatOverlay.userData.t=0; flatOverlay.userData.sec=i; scene.add(flatOverlay);
   const sg=new THREE.Group(); flatOverlay.add(sg);
   const _rb=ribbonOn,_vs=VS,_sx=SCORE_XOFF,_fb=flatNoBend,_sG=staffG,_nG=noteG,_aG=annoG;
   ribbonOn=false; SCORE_XOFF=0; flatNoBend=true; newCanvasGroups(sg);       // truly flat (no depth-bend)
   renderStaff(SCORES[key], false, true);                                    // clefs on, photos off
-  ribbonOn=_rb; VS=_vs; SCORE_XOFF=_sx; flatNoBend=_fb; staffG=_sG; noteG=_nG; annoG=_aG;
-  sg.position.set(0, -2.2, 0);                                              // staff in the lower area (video sits above)
-  // collect this overlay's own (freshly-created, non-shared) materials so updateSeparation can fade them in
-  flatOverlay.userData.mats=[];
-  sg.traverse(o=>{ if(o.material){ const a=Array.isArray(o.material)?o.material:[o.material]; a.forEach(m=>{ m.transparent=true; m.opacity=0; flatOverlay.userData.mats.push(m); }); } });
+  VS=_vs; ribbonOn=_rb; SCORE_XOFF=_sx; flatNoBend=_fb; staffG=_sG; noteG=_nG; annoG=_aG;
+
+  flatOverlay.updateMatrixWorld(true); root.updateMatrixWorld(true);
+  const parts=[]; sg.traverse(o=>{ if(o.isMesh||o.isSprite) parts.push(o); });
+  const onRing=(x,y,z)=>ribbonAt((i+x/W+0.5)/ribN, x/W+0.5, y, z).applyMatrix4(root.matrixWorld);
+  const v=new THREE.Vector3(), q=new THREE.Quaternion(), sc=new THREE.Vector3();
+  const baked=parts.map(o=>{
+    o.matrixWorld.decompose(v,q,sc);
+    const e={o};
+    if(o.isSprite){ e.flat=v.toArray(); e.ring=onRing(v.x,v.y,v.z).toArray(); e.sc=sc.clone(); }
+    else{
+      const g=o.geometry.clone(); g.applyMatrix4(o.matrixWorld);                // clone: note geometries may be shared
+      o.geometry=g; const a=g.attributes.position.array;
+      e.flat=Float32Array.from(a); e.ring=new Float32Array(a.length);
+      for(let j=0;j<a.length;j+=3){ const r=onRing(a[j],a[j+1],a[j+2]); e.ring[j]=r.x; e.ring[j+1]=r.y; e.ring[j+2]=r.z; }
+    }
+    return e;
+  });
+  const fade=[];
+  baked.forEach(({o})=>{
+    sg.add(o); o.position.set(0,0,0); o.rotation.set(0,0,0); o.scale.set(1,1,1); o.frustumCulled=false;
+    if(o.userData.flatOnly){ o.material.transparent=true; o.material.opacity=0; fade.push(o.material); }
+  });
+  flatOverlay.userData.baked=baked; flatOverlay.userData.fade=fade;
+  // the morph stands in for the real section; its rollout photos stay and fade with the loop
+  const hidden=[]; sectionGroups[i].traverse(o=>{ if((o.isMesh||o.isSprite)&&o.visible&&!o.userData.photo){ o.visible=false; hidden.push(o); } });
+  flatOverlay.userData.hidden=hidden;
   // real-robot video as an HTML element with native controls (play/pause/scrub), ABOVE the score
   const vfile=HERO_VIDEO[key];
   if(vfile && _urlP.get('novid')!=='1'){
     heroVidEl=document.createElement('video');
     heroVidEl.src='videos/'+vfile;
-    heroVidEl.controls=true; heroVidEl.loop=false; heroVidEl.muted=true; heroVidEl.autoplay=true; heroVidEl.playsInline=true;
-    heroVidEl.style.cssText='position:fixed;top:6%;left:50%;transform:translateX(-50%);width:min(44vw,560px);max-height:46vh;z-index:50;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.18);background:#000;';
+    heroVidEl.controls=true; heroVidEl.loop=false; heroVidEl.muted=true; heroVidEl.playsInline=true;
+    heroVidEl.style.cssText='position:fixed;top:6%;left:50%;transform:translateX(-50%);width:min(44vw,560px);max-height:46vh;z-index:50;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.18);background:#000;opacity:0;';
     document.body.appendChild(heroVidEl);
-    const pp=heroVidEl.play(); if(pp)pp.catch(()=>{});
   }
 }
-function selectSec(k){ secSel=k; secHover=-1; if(k>=0) buildFlatOverlay(k); else if(flatOverlay) flatOverlay.userData.closing=true; }   // close fades out in updateSeparation
+// Open = turn the section to the front, then morph. wait=true keeps the loop's own speed until it arrives.
+function selectSec(k,wait){
+  secSel=k; secHover=-1; pendSec=k; pendWait=!!wait; glideV=spinV; spinV=0;
+  if(flatOverlay) flatOverlay.userData.closing=true;
+}
+const _smooth=x=>{ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); };
+const MORPH_DUR=2.4, _TAU=Math.PI*2;
+function glideToFront(){                                                     // true once section pendSec faces the camera
+  let d=((-_TAU*pendSec/ribN-root.rotation.y)%_TAU+_TAU)%_TAU;               // forward angle to go
+  if(d>Math.PI && (!pendWait || d>_TAU-0.5)) d-=_TAU;                        // shortest way, unless waiting for it to come round
+  const vmax=pendWait?0.0035*ribSpin:0.05;
+  glideV+=(Math.sign(d)*Math.min(vmax,Math.abs(d)*0.02)-glideV)*0.08;        // critically damped: settles without overshoot
+  root.rotation.y+=glideV;
+  return Math.abs(d)<0.002 && Math.abs(glideV)<0.0005;
+}
+const _mM=new THREE.Matrix4(), _mS=new THREE.Vector3(), _mP=new THREE.Vector3(), _mD=new THREE.Vector3(), _mR=new THREE.Vector3(), _mOff=new THREE.Matrix4().makeTranslation(0,-2.2,0);
+function morphOverlay(t){
+  const i=flatOverlay.userData.sec;
+  _mD.set(0,0,-1).applyQuaternion(camera.quaternion);
+  _mP.copy(camera.position).addScaledVector(_mD,12);                         // the flat page: billboard close, front-centre, staff below the video
+  _mM.compose(_mP,camera.quaternion,_mS.setScalar(0.62)).multiply(_mOff);
+  const e=_mM.elements;
+  _mR.copy(sectionRadial[i]).applyQuaternion(root.quaternion).multiplyScalar(SEC_PULL*secPull[i]);   // same pull as the real section, so the hand-off is exact
+  const unroll=x=>_smooth((t-0.25-0.2*Math.min(1,Math.abs(x)/(W/2)))/0.5);   // straightens from the middle out; the ends curl last
+  for(const b of flatOverlay.userData.baked){
+    const f=b.flat, r=b.ring;
+    if(b.o.isSprite){
+      const s=unroll(f[0]), x=e[0]*f[0]+e[4]*f[1]+e[8]*f[2]+e[12], y=e[1]*f[0]+e[5]*f[1]+e[9]*f[2]+e[13], z=e[2]*f[0]+e[6]*f[1]+e[10]*f[2]+e[14];
+      b.o.position.set(r[0]+_mR.x+(x-r[0]-_mR.x)*s, r[1]+_mR.y+(y-r[1]-_mR.y)*s, r[2]+_mR.z+(z-r[2]-_mR.z)*s);
+      b.o.scale.copy(b.sc).multiplyScalar(1-0.38*s);
+      continue;
+    }
+    const a=b.o.geometry.attributes.position, p=a.array;
+    for(let j=0;j<p.length;j+=3){
+      const fx=f[j],fy=f[j+1],fz=f[j+2], s=unroll(fx);
+      const rx=r[j]+_mR.x, ry=r[j+1]+_mR.y, rz=r[j+2]+_mR.z;
+      p[j]  =rx+(e[0]*fx+e[4]*fy+e[8]*fz+e[12]-rx)*s;
+      p[j+1]=ry+(e[1]*fx+e[5]*fy+e[9]*fz+e[13]-ry)*s;
+      p[j+2]=rz+(e[2]*fx+e[6]*fy+e[10]*fz+e[14]-rz)*s;
+    }
+    a.needsUpdate=true;
+  }
+  const late=_smooth((t-0.72)/0.28);                                         // clefs and video arrive once it is flat
+  for(const m of flatOverlay.userData.fade) m.opacity=late;
+  if(heroVidEl){
+    heroVidEl.style.opacity=late;
+    heroVidEl.style.clipPath=late<1?`inset(0 ${(1-late)*50}% 0 ${(1-late)*50}%)`:'none';   // the video unrolls with the score
+    if(late>0.5 && !flatOverlay.userData.closing && !flatOverlay.userData.played){ flatOverlay.userData.played=true; const pp=heroVidEl.play(); if(pp)pp.catch(()=>{}); }
+  }
+}
 function updateSeparation(){
+  const now=performance.now(), dt=Math.min(0.05,(now-lastNow)/1000); lastNow=now;
+  if(pendSec>=0 && !flatOverlay && glideToFront()){ glideV=0; buildFlatOverlay(pendSec); pendSec=-1; }
+  const open=flatOverlay?flatOverlay.userData:null;
   for(let i=0;i<sectionGroups.length;i++){
     const g=sectionGroups[i]; if(!g) continue;
-    const tgt=(i===secHover||i===secSel)?1:0;
+    const tgt=(i===secHover||(open&&open.sec===i&&(!open.closing||open.t>0.2)))?1:0;   // back into its slot last
     secPull[i]+=(tgt-secPull[i])*0.09;                                       // gentle pull-out / settle
     const r=sectionRadial[i], s=SEC_PULL*secPull[i];
     g.position.set(r.x*s, r.y*s, r.z*s);
   }
-  // cross-fade the loop against the flat score: fade out on open, back in on close
-  const lt=(secSel>=0)?0:1;
-  if(lt!==loopA || loopMats){
-    loopA=lt>loopA?Math.min(1,loopA+0.02):Math.max(0,loopA-0.035);   // back in slower than out
+  // the rest of the loop steps back while the section flattens, and returns before it curls back in
+  loopA=open?1-_smooth((open.t-0.25)/0.4):1;
+  if(loopA<1 || loopMats){
     if(!loopMats){ loopMats=[]; root.traverse(o=>{ if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(!m.userData._lf){ m.userData._lf={t:m.transparent,o:m.opacity}; loopMats.push(m); } }); }); }
-    const le=loopA*loopA*(3-2*loopA);
-    for(const m of loopMats){ m.transparent=true; m.opacity=m.userData._lf.o*le; }
-    if(loopA===lt && lt===1){ for(const m of loopMats){ m.transparent=m.userData._lf.t; m.opacity=m.userData._lf.o; delete m.userData._lf; } loopMats=null; }
+    for(const m of loopMats){ m.transparent=true; m.opacity=m.userData._lf.o*loopA; }
+    if(loopA>=1){ for(const m of loopMats){ m.transparent=m.userData._lf.t; m.opacity=m.userData._lf.o; delete m.userData._lf; } loopMats=null; }
   }
   root.visible = loopA>0.002;                                                // staff is morphed in place during the intro (notes/photos hidden separately)
-  if(flatOverlay){
-    const cl=flatOverlay.userData.closing;
-    flatOverlay.userData.t=cl?Math.max(0, flatOverlay.userData.t-0.02):Math.min(1, flatOverlay.userData.t+0.035);   // slower flatten / unflatten
-    if(cl && flatOverlay.userData.t<=0){ destroyFlatOverlay(); return; }
-    const e=flatOverlay.userData.t, ease=e*e*(3-2*e);                        // smoothstep: ease in + out
-    const camDir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-    flatOverlay.position.copy(camera.position).addScaledVector(camDir,12);   // billboard close, front-centre
-    flatOverlay.quaternion.copy(camera.quaternion);
-    flatOverlay.scale.setScalar(0.62*(0.9+0.1*ease));                        // subtle settle, no pop
-    const mats=flatOverlay.userData.mats; if(mats) for(const m of mats) m.opacity=ease;   // fade in / out
-    if(heroVidEl) heroVidEl.style.opacity=ease;
+  if(open){
+    open.t=open.closing?Math.max(0,open.t-dt/MORPH_DUR):Math.min(1,open.t+dt/MORPH_DUR);
+    if(open.closing && open.t<=0){ destroyFlatOverlay(); return; }
+    morphOverlay(open.t);
   }
 }
 if(HERO){
   // Section interaction is locked until the SPARK intro finishes -- hovering/clicking mid-morph
   // would pull a section out and break the reveal.
-  renderer.domElement.addEventListener('pointermove',e=>{ if(introActive){ secHover=-1; return; } if(secSel<0){ secHover=pickSec(e); renderer.domElement.style.cursor=secHover>=0?'pointer':'grab'; } });
-  renderer.domElement.addEventListener('click',e=>{ if(introActive) return; const k=pickSec(e); if(k>=0) selectSec(secSel===k?-1:k); else if(secSel>=0) selectSec(-1); });
+  renderer.domElement.addEventListener('pointermove',e=>{ if(introActive){ secHover=-1; return; } if(secSel<0&&!flatOverlay){ secHover=pickSec(e); renderer.domElement.style.cursor=secHover>=0?'pointer':'grab'; } });
+  renderer.domElement.addEventListener('click',e=>{ if(introActive) return; if(secSel>=0){ selectSec(-1); return; } const k=pickSec(e); if(k>=0) selectSec(k); });
   window.addEventListener('message',ev=>{ const d=ev.data; if(!d||d.type!=='hero')return;
     if(introActive) return;
-    if(d.action==='hover'){ if(secSel<0) secHover=d.sec; }
+    if(d.action==='hover'){ if(secSel<0&&!flatOverlay) secHover=d.sec; }
     else if(d.action==='leave'){ if(secSel<0) secHover=-1; }
-    else if(d.action==='select'){ selectSec(secSel===d.sec?-1:d.sec); } });
+    else if(d.action==='select'){ selectSec(secSel===d.sec?-1:d.sec, d.wait); } });
 }
 
 // ── SPARK INTRO (medley hero): a 5-line staff ribbon spells S P A R K, then reflows
@@ -1848,8 +1919,10 @@ function animate(){
   t+=0.003;ctrl.update();
   // Slowly turn the medley loop so the segments travel past the camera (live only;
   // PNG exports stay on the fixed opening/overview view).
-  if(curScore&&curScore.medley&&!EXPORT_MODE && !introActive && !(HERO&&(secHover>=0||secSel>=0))){
-    root.rotation.y += 0.0035*ribSpin;     // pause spin during the intro (so the loop stays aligned with the folded letters) and while a section is open
+  if(curScore&&curScore.medley&&!EXPORT_MODE){
+    // pause spin during the intro (so the loop stays aligned with the folded letters), on hover, and while a section is turning to the front or open
+    const spin=!introActive && !(HERO&&(secHover>=0||secSel>=0||flatOverlay||pendSec>=0));
+    spinV+=((spin?0.0035*ribSpin:0)-spinV)*0.04; root.rotation.y+=spinV;
   }
   if(HERO&&curScore&&curScore.medley){ updateIntro(); updateSeparation(); }
   if(selMesh){
