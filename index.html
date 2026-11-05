@@ -108,11 +108,9 @@
             failures locally and anchor the objects to the scene again. We ask for a new plan only if this fails. We
             isolate this concept by taking a fixed plan and moving objects in the scene while executing. When
             displacing objects by 10&nbsp;cm we were still able to complete <strong>66.7%</strong> of trials with
-            scene-diff verification and layered recovery, and we did not have to change the plan. Without practicing
-            on the tasks being tested or using ground-truth object poses from the simulator during rollouts, we test
-            our full system (with one open-weight 27B planner with 4-bit weights) on LIBERO-PRO. Under this protocol
+            scene-diff verification and layered recovery, and we did not have to change the plan. We test our full system, with one open-weight 27B planner with 4-bit weights, on LIBERO-PRO.
             SPARK achieves a mean success of <strong>75.1%</strong> across the 6 position and task settings and
-            <strong>69.7%</strong> on the held-out language and object settings. We also achieve a
+            <strong>69.7%</strong> on the language and object settings. We also achieve a
             <strong>68%</strong> success rate across 11 physical task-embodiment settings on 3 different robots. Our
             work demonstrates that for an important class of failures, the robot does not need to ask for a new plan
             for its task. It can be enough to update the system's view of the world.
@@ -151,8 +149,7 @@
             arm 10 cm, run SAM3 again, and re-execute the same plan with updated object locations. Tier 3 asks the
             language model for a replacement plan, but only after the execution attempt is exhausted. Tiers 1 and 2
             keep the behavior tree and need no language-model call. Over thirty registered skills, built on five base primitives, implement closed-loop behaviors such as
-            descending until contact. All skills were written with Claude Code against a typed contract and checked by the authors, and
-            the skill registry does not change during any reported run.
+            descending until contact. All skills were written with Claude Code against a typed contract and checked by the authors.
           </p>
           <p>
             In simulation, one additional language-model call suggests three prompts per object, and SAM3 confidence
@@ -177,8 +174,7 @@
         <h3 class="title is-5 has-text-centered">LIBERO-PRO</h3>
         <p class="has-text-centered content">
           Success rates (%) on six settings: three suites, each with position (Pos) and task (Task) perturbations, 10
-          tasks &times; 50 trials on LIBERO-PRO's own initial states. SPARK uses the open-weight Qwen3.8-27B planner and
-          no ground-truth object poses, and no scored episode is used for practice. As in the RATS evaluation, a
+          tasks &times; 50 trials on LIBERO-PRO's own initial states. SPARK uses the open-weight Qwen3.8-27B planner. As in the RATS evaluation, a
           success check after each attempt decides whether to retry.
         </p>
         <div style="overflow-x:auto;">
@@ -204,8 +200,7 @@
           LIBERO checkpoint.
         </p>
         <p class="has-text-centered content">
-          SPARK reaches <strong>75.1%</strong> mean success, 31.3 points above RATS at 43.8%. On the language and
-          object perturbations, which were not used to derive the grounding rules, SPARK averages
+          SPARK reaches <strong>75.1%</strong> mean success, 31.3 points above RATS at 43.8%. On the language and object settings, SPARK averages
           <strong>69.7%</strong> (object 92.4 and 77.4, goal 64.6 and 47.2, spatial 50.8 and 85.8). When retries are
           decided only by the robot's own grasp and scene checks and the success check runs once after execution,
           SPARK scores 67.5% on the same six settings.
@@ -223,8 +218,7 @@
           <img src="static/media/figs/libero_heatmap_object.png" alt="Per-task LIBERO-PRO success, object suite">
           <img src="static/media/figs/libero_heatmap_goal.png" alt="Per-task LIBERO-PRO success, goal suite">
           <figcaption>
-            Per-task success (%), 50 trials per task. Rows: SPARK position and task, SPARK on the held-out language and
-            object perturbations (*), and MolmoAct2 position and task.
+            Per-task success (%), 50 trials per task. Rows: SPARK position and task, SPARK on the language and object settings (*), and MolmoAct2 position and task.
           </figcaption>
         </figure>
 
