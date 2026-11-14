@@ -62,6 +62,7 @@
           </div>
 
           <div class="publication-links">
+            <a class="btn-link" href="static/SPARK.pdf" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M4 0h5.3L13 3.7V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm5 1v3h3L9 1zM4.5 7a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6zm0 2.5a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1h-6zm0 2.5a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4z"/></svg><span>Paper</span></a>
             <a class="btn-link" href="https://arxiv.org/abs/2606.30613"><i class="ai ai-arxiv"></i><span>arXiv</span></a>
             <a class="btn-link" href="https://github.com/CWRU-AISM/sparkbot" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" fill-rule="evenodd"/></svg><span>Code</span></a>
           </div>
@@ -202,9 +203,10 @@
           LIBERO checkpoint.
         </p>
         <p class="has-text-centered content">
-          Under the RATS protocol SPARK reaches <strong>77.8%</strong> mean success, 34.0 points above RATS at 43.8%. Under the strict
-          protocol it reaches <strong>74.4%</strong>. On the language and object settings, which were not used to develop the grounding rules,
-          SPARK averages <strong>69.7%</strong> under the RATS protocol (object 92.4 and 77.4, goal 64.6 and 47.2, spatial 50.8 and 85.8).
+          Under the RATS protocol, SPARK attains an average of <strong>77.8%</strong>, an improvement of 34.0 points over RATS (43.8%). SPARK
+          obtains <strong>74.4%</strong> under the strict protocol. For the language and object settings, which were not used to develop the
+          grounding rules, SPARK obtains an average of <strong>69.7%</strong> under the RATS protocol (object 92.4 and 77.4, goal 64.6 and 47.2,
+          spatial 50.8 and 85.8).
         </p>
 
         <figure class="result-fig">
@@ -225,11 +227,12 @@
 
         <h3 class="title is-5 has-text-centered" style="margin-top:2.6rem;">Recovering when objects move (LIBERO-Displace)</h3>
         <p class="has-text-centered content">
-          The pick target slides by 0 to 10 cm over 40 simulator steps at one of three points in the episode, on the same
-          seeded schedule for every arm: 10 object-suite tasks, three displacement phases and five initial states, 150 trials
-          per cell. Each recovery mechanism is switched on by itself, with the plan source, skills, executor and perception held
-          fixed. Scene diff checks for object motion during each move and retargets the move. The ladder re-binds to new
-          detections, then retries locally, then asks for a new plan. Only the robot's own checks start a recovery.
+          The target for the pick is displaced by 0 to 10 cm over 40 simulator steps at one of 3 times during the episode, following the
+          same seeded schedule across all arms. We test 10 object-suite tasks &times; 3 displacement phases &times; 5 initial states = 150
+          trials per cell. In all cases, we enable the single recovery mechanism under test while holding plan source, skill set, executor and
+          perception constant. Scene diff monitors for object movement during each move and retargets the move as needed, while the ladder
+          re-binds to new detections, performs local retries and then requests a new plan as necessary. Recoveries are only invoked by the
+          robot's own checks.
         </p>
         <div style="overflow-x:auto;">
         <table class="result-table" style="max-width:760px;">
@@ -246,10 +249,10 @@
         </table>
         </div>
         <p class="has-text-centered content">
-          Successes out of 150. At 10 cm with identical scripted plans, scene diff and the ladder succeed in 90 of 150 trials
-          (<strong>60.0%</strong>), against 3 of 150 with neither, and the scripted plan does not change. With planner-written plans they
-          succeed in 107 of 150 trials, against 71. On the same displaced trials the ladder succeeds in 91 of 150 trials at 10 cm and
-          asking for a new plan after each failure in 72.
+          We report successful trials out of 150. When the displacement is 10 cm and plans are generated from the same script, scene diff and
+          the ladder yield 90/150 successes (<strong>60.0%</strong>) vs 3/150 for no recovery, with plans unchanged. When plans come from the
+          planner, scene diff and the ladder give 107/150 vs 71/150. On the same displaced trials, the ladder obtains 91/150 at 10 cm and
+          72/150 when a new plan is requested after each failure.
         </p>
 
         <h3 class="title is-5 has-text-centered" style="margin-top:2.6rem;">CaP-Bench (Robosuite)</h3>
@@ -289,9 +292,9 @@
           </tbody>
         </table>
         <p class="has-text-centered content">
-          SPARK succeeds in 165 of 220 trials (<strong>75.0%</strong>). The same utensils-in-tray task runs on
-          two platforms: UR10e 20/20 and FR3 16/20. With objects moved by hand during the episode, the UR10e completes 10/10
-          Utensils in tray, Stack blocks and Plushie in bowl trials and 8/10 Utensils in bowl trials. On
+          SPARK achieves 165/220 = <strong>75.0%</strong> success. The same utensils-in-tray task runs on two platforms, achieving 20/20
+          (UR10e) and 16/20 (FR3) successes. With manual displacements of objects during task execution, we achieve 10/10 successes on the UR10e
+          for Utensils in tray, Stack blocks and Plushie in bowl, and 8/10 for Utensils in bowl. On
           the bimanual platform, sleeve folding succeeds in 15/20 trials, while the complete three-fold sequence
           succeeds in 6/20.
         </p>
